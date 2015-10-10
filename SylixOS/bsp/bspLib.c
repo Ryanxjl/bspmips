@@ -12,9 +12,9 @@
 **
 ** 文   件   名: bspLib.c
 **
-** 创   建   人: Han.Hui (韩辉)
+** 创   建   人: Ryan.xin (信金龙)
 **
-** 文件创建日期: 2007 年 12 月 09 日
+** 文件创建日期: 2015 年 09 月 09 日
 **
 ** 描        述: 处理器需要为 SylixOS 提供的功能支持.
 *********************************************************************************************************/
@@ -27,25 +27,19 @@
 #include "driver/tty/8250_uart.h"                                       /*  调试端口                    */
 #include "driver/sio_poll/sio.h"
 
-/*
- * TODO: 修改以下字符串为目标板的 CPU 信息
- */
 static const CHAR   _G_pcCpuInfo[]     = "MIPS QEMU32BITEL (24KF /101MHz NonFPU)";
-/*
- * TODO: 修改以下字符串为目标板的 CACHE 信息
- */
 static const CHAR   _G_pcCacheInfo[]   = "32KBytes L1-Cache (D-16K/I-16K)";
-/*
- * TODO: 修改以下字符串为目标板的信息
- */
 static const CHAR   _G_pcPacketInfo[]  = "Qemumipsel Packet";
-/*
- * TODO: 修改以下字符串为 BSP 的版本信息
- */
 static const CHAR   _G_pcVersionInfo[] = "BSP version 1.0.2 for GEMINI";
 /*********************************************************************************************************
   中断相关
 *********************************************************************************************************/
+#include <arch/assembler.h>
+
+UINT32  CP0_wGetSR (VOID);
+UINT32  CP0_wGetCAUSE (VOID);
+VOID    CP0_wSetSR (UINT32  uiCP0Status);
+
 /*********************************************************************************************************
 ** 函数名称: bspIntInit
 ** 功能描述: 中断系统初始化
@@ -57,8 +51,6 @@ static const CHAR   _G_pcVersionInfo[] = "BSP version 1.0.2 for GEMINI";
 VOID  bspIntInit (VOID)
 {
     /*
-     * TODO: 加入你的处理代码
-     *
      * 如果某中断为链式中断，请加入形如:
      * API_InterVectorSetFlag(LW_IRQ_4, LW_IRQ_FLAG_QUEUE);
      * 的代码.
@@ -78,12 +70,31 @@ VOID  bspIntInit (VOID)
 *********************************************************************************************************/
 VOID  bspIntHandle (VOID)
 {
-    /*
-     * TODO: 通过读取硬件寄存器, 得到当前产生的中断向量号, 并赋给 uiVector 变量
-     */
-    REGISTER UINT32   uiVector = 0;
+    REGISTER UINT32  uiCause  = CP0_wGetCAUSE();
 
-    archIntHandle((ULONG)uiVector, LW_FALSE);
+    if ((uiCause & M_CauseExcCode) == EX_INT) {
+
+        REGISTER UINT32  uiVector    = 0;
+
+        REGISTER UINT32  uiCP0Status = CP0_wGetSR();
+
+        uiCP0Status  &= M_StatusIM;
+        uiCP0Status >>= S_StatusIM;
+
+        uiCause  &= M_CauseIP;
+        uiCause >>= S_CauseIP;
+
+        uiCause &= uiCP0Status;
+
+        for (uiVector = 0; uiVector < BSP_INT_NUMS; uiVector++) {
+            if (uiCause & (1 << uiVector)) {
+                archIntHandle((ULONG)uiVector, LW_FALSE);
+            }
+        }
+    } else {
+        while (1) {
+        }
+    }
 }
 /*********************************************************************************************************
 ** 函数名称: bspIntVecterEnable
@@ -95,9 +106,13 @@ VOID  bspIntHandle (VOID)
 *********************************************************************************************************/
 VOID  bspIntVectorEnable (ULONG  ulVector)
 {
-    /*
-     * TODO: 通过设置硬件寄存器, 使能指定的中断向量
-     */
+    if (ulVector < BSP_INT_NUMS) {
+        REGISTER UINT32  uiCP0Status = CP0_wGetSR();
+
+        uiCP0Status |= 1 << (ulVector + S_StatusIM);
+
+        CP0_wSetSR(uiCP0Status);
+    }
 }
 /*********************************************************************************************************
 ** 函数名称: bspIntVecterDisable
@@ -109,9 +124,13 @@ VOID  bspIntVectorEnable (ULONG  ulVector)
 *********************************************************************************************************/
 VOID  bspIntVectorDisable (ULONG  ulVector)
 {
-    /*
-     * TODO: 通过设置硬件寄存器, 禁能指定的中断向量
-     */
+    if (ulVector < BSP_INT_NUMS) {
+        REGISTER UINT32  uiCP0Status = CP0_wGetSR();
+
+        uiCP0Status &= ~(1 << (ulVector + S_StatusIM));
+
+        CP0_wSetSR(uiCP0Status);
+    }
 }
 /*********************************************************************************************************
 ** 函数名称: bspIntVecterIsEnable
@@ -123,10 +142,16 @@ VOID  bspIntVectorDisable (ULONG  ulVector)
 *********************************************************************************************************/
 BOOL  bspIntVectorIsEnable (ULONG  ulVector)
 {
-    /*
-     * TODO: 通过读取硬件寄存器, 检查指定的中断向量是否使能
-     */
-    return  ((0) ? LW_FALSE : LW_TRUE);
+    if (ulVector < BSP_INT_NUMS) {
+        REGISTER UINT32  uiCP0Status = CP0_wGetSR();
+
+        uiCP0Status  &= M_StatusIM;
+        uiCP0Status >>= S_StatusIM;
+
+        return  ((uiCP0Status & (1 << ulVector)) ? LW_TRUE : LW_FALSE);
+    } else {
+        return  (LW_TRUE);
+    }
 }
 /*********************************************************************************************************
   BSP 信息
@@ -256,10 +281,6 @@ size_t bspInfoRamSize (VOID)
 VOID  bspTaskCreateHook (LW_OBJECT_ID  ulId)
 {
     (VOID)ulId;
-
-    /*
-     * TODO: 加入你的处理代码
-     */
 }
 /*********************************************************************************************************
 ** 函数名称: bspTaskDeleteHook
@@ -276,10 +297,6 @@ VOID  bspTaskDeleteHook (LW_OBJECT_ID  ulId, PVOID  pvReturnVal, PLW_CLASS_TCB  
     (VOID)ulId;
     (VOID)pvReturnVal;
     (VOID)ptcb;
-
-    /*
-     * TODO: 加入你的处理代码
-     */
 }
 /*********************************************************************************************************
 ** 函数名称: bspTaskSwapHook
@@ -294,10 +311,6 @@ VOID  bspTaskSwapHook (LW_OBJECT_HANDLE   hOldThread, LW_OBJECT_HANDLE   hNewThr
 {
     (VOID)hOldThread;
     (VOID)hNewThread;
-
-    /*
-     * TODO: 加入你的处理代码
-     */
 }
 /*********************************************************************************************************
 ** 函数名称: bspTaskIdleHook
@@ -309,9 +322,6 @@ VOID  bspTaskSwapHook (LW_OBJECT_HANDLE   hOldThread, LW_OBJECT_HANDLE   hNewThr
 *********************************************************************************************************/
 VOID  bspTaskIdleHook (VOID)
 {
-    /*
-     * TODO: 加入你的处理代码
-     */
 }
 /*********************************************************************************************************
 ** 函数名称: bspTaskIdleHook
@@ -324,10 +334,6 @@ VOID  bspTaskIdleHook (VOID)
 VOID  bspTickHook (INT64   i64Tick)
 {
     (VOID)i64Tick;
-
-    /*
-     * TODO: 加入你的处理代码
-     */
 }
 /*********************************************************************************************************
 ** 函数名称: bspWdTimerHook
@@ -340,10 +346,6 @@ VOID  bspTickHook (INT64   i64Tick)
 VOID  bspWdTimerHook (LW_OBJECT_ID  ulId)
 {
     (VOID)ulId;
-
-    /*
-     * TODO: 加入你的处理代码
-     */
 }
 /*********************************************************************************************************
 ** 函数名称: bspTCBInitHook
@@ -358,10 +360,6 @@ VOID  bspTCBInitHook (LW_OBJECT_ID  ulId, PLW_CLASS_TCB   ptcb)
 {
     (VOID)ulId;
     (VOID)ptcb;
-
-    /*
-     * TODO: 加入你的处理代码
-     */
 }
 /*********************************************************************************************************
 ** 函数名称: bspKernelInitHook
@@ -373,9 +371,6 @@ VOID  bspTCBInitHook (LW_OBJECT_ID  ulId, PLW_CLASS_TCB   ptcb)
 *********************************************************************************************************/
 VOID  bspKernelInitHook (VOID)
 {
-    /*
-     * TODO: 加入你的处理代码
-     */
 }
 /*********************************************************************************************************
 ** 函数名称: bspReboot
@@ -410,9 +405,6 @@ VOID  bspReboot (INT  iRebootType, addr_t  ulStartAddress)
 *********************************************************************************************************/
 VOID  bspDebugMsg (CPCHAR  pcMsg)
 {
-    /*
-     * TODO: 通过 UART 打印系统调试信息
-     */
     uart8250PutStr((addr_t)0xb40003f8, pcMsg);
 }
 /*********************************************************************************************************
@@ -431,9 +423,6 @@ VOID  bspDebugMsg (CPCHAR  pcMsg)
 *********************************************************************************************************/
 ULONG  bspMmuPgdMaxNum (VOID)
 {
-    /*
-     * TODO: 返回 PGD 池的数量, 推荐返回 1
-     */
     return  (1);
 }
 /*********************************************************************************************************
@@ -446,9 +435,6 @@ ULONG  bspMmuPgdMaxNum (VOID)
 *********************************************************************************************************/
 ULONG  bspMmuPteMaxNum (VOID)
 {
-    /*
-     * TODO: 返回 PTE 池的数量 (映射 4GB 空间, 需要 4096 个 PTE 池)
-     */
     return  (2048);
 }
 /*********************************************************************************************************
@@ -559,6 +545,15 @@ VOID    bspCpuPowerGet (UINT  *puiPowerLevel)
 #if TICK_IN_THREAD > 0
 static LW_HANDLE    htKernelTicks;                                      /*  操作系统时钟服务线程句柄    */
 #endif                                                                  /*  TICK_IN_THREAD > 0          */
+
+UINT32  CP0_wGet_COUNT (VOID);
+UINT32  CP0_wGet_COMPARE (VOID);
+VOID    CP0_wSet_COUNT (UINT32 uiCount);
+VOID    CP0_wSet_COMPARE (UINT32 uiCompare);
+UINT32  CP0_wGet_INTCTL (VOID);
+
+#define BSP_TMR_RELOAD      (500 * 1000 * 1000 / (2 * LW_TICK_HZ))
+
 /*********************************************************************************************************
 ** 函数名称: __tickThread
 ** 功能描述: 初始化 tick 服务线程
@@ -589,9 +584,13 @@ static VOID  __tickThread (VOID)
 *********************************************************************************************************/
 static irqreturn_t  __tickTimerIsr (VOID)
 {
-    /*
-     * TODO: 通过设置硬件寄存器, 清除 tick 定时器中断
-     */
+    UINT32  uiCompare = CP0_wGet_COMPARE() + BSP_TMR_RELOAD;
+    UINT32  uiCount   = CP0_wGet_COUNT();
+
+    if (uiCompare < uiCount) {
+        uiCompare = uiCount;
+    }
+    CP0_wSet_COMPARE(uiCompare);                                        /*  清除 tick 定时器中断        */
 
     API_KernelTicksContext();                                           /*  保存被时钟中断的线程控制块  */
 
@@ -631,17 +630,19 @@ VOID  bspTickInit (VOID)
                                      &threakattr, LW_NULL);
 #endif                                                                  /*  TICK_IN_THREAD > 0          */
 
-    /*
-     * TODO: 初始化硬件定时器, 频率为 LW_CFG_TICKS_PER_SEC, 类型为自动重装, 启动硬件定时器
-     *
-     * 并将硬件定时器的向量中断号赋给 ulVector 变量
-     */
+    UINT32  uiIntCtl = CP0_wGet_INTCTL();
+
+    ulVector = ((uiIntCtl & M_IntCtlIPPI) >> S_IntCtlIPPI);
+
+    CP0_wSet_COUNT(0);
+    CP0_wSet_COMPARE(BSP_TMR_RELOAD);
+
     API_InterVectorConnect(ulVector,
                            (PINT_SVR_ROUTINE)__tickTimerIsr,
                            LW_NULL,
                            "tick_timer");
 
-    bspIntVectorEnable(ulVector);
+    API_InterVectorEnable(ulVector);
 }
 /*********************************************************************************************************
 ** 函数名称: bspTickHighResolution

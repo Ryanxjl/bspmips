@@ -26,21 +26,22 @@
 #include <arch/assembler.h>
 #include "config.h"
 
-FILE_BEGIN()
+    FILE_BEGIN()
 ;/*********************************************************************************************************
 ;  引入外部符号
 ;*********************************************************************************************************/
 
     IMPORT_LABEL(bspInit)
+    IMPORT_LABEL(archInterruptEntry)
 
 ;/*********************************************************************************************************
 ;  cache_loop
 ;*********************************************************************************************************/
 
 MACRO_DEF(cache_loop   curr, end, line_sz, op)
-10: cache       \op, 0(\curr)
-    PTR_ADDU    \curr, \curr, \line_sz
-    bne     \curr, \end, 10b
+10: cache   \op , 0(\curr)
+    ADDU    \curr , \curr , \line_sz
+    BNE     \curr , \end , 10b
 MACRO_END()
 
 ;/*********************************************************************************************************
@@ -48,14 +49,14 @@ MACRO_END()
 ;*********************************************************************************************************/
 
 MACRO_DEF(setup_c0_status set clr)
-    .set    push
-    mfc0    t0, CP0_STATUS
-    or  t0, M_StatusCU0 | \set | 0x1f | \clr
-    xor t0, 0x1f | \clr
-    mtc0    t0, CP0_STATUS
-    .set    noreorder
-    sll     zero, 3
-    .set    pop
+    .set push
+    MFC0(T0, CP0_STATUS)
+    OR      T0 ,  M_StatusCU0 | \set | 0x1f | \clr
+    XOR     T0 ,  0X1F | \clr
+    MTC0(T0, CP0_STATUS)
+    .set noreorder
+    SLL     ZERO , 3
+    .set pop
 MACRO_END()
 
 ;/*********************************************************************************************************
@@ -65,41 +66,43 @@ MACRO_END()
     SECTION(.vector)
 
 FUNC_DEF(vector)
-     /* U-boot entry point */
+;     /* U-boot entry point */
      b   reset
-     nop
+     NOP
 
     .org 0x10
 
     .org 0x200
-    /* TLB refill, 32 bit task */
+;    /* TLB refill, 32 bit task */
 1:  b   1b
-     nop
+    NOP
 
     .org 0x280
-    /* XTLB refill, 64 bit task */
+;    /* XTLB refill, 64 bit task */
 1:  b   1b
-     nop
+    NOP
 
     .org 0x300
-    /* Cache error exception */
+;    /* Cache error exception */
 1:  b   1b
-     nop
+    NOP
 
     .org 0x380
-    /* General exception */
-1:  b   1b
-     nop
+;    /* General exception */
+    LA   T7, archInterruptEntry
+    JR   T7
+    NOP
 
     .org 0x400
-    /* Catch interrupt exceptions */
-1:  b   1b
-     nop
+;    /* Catch interrupt exceptions */
+    LA   T7, archInterruptEntry
+    JR   T7
+    NOP
 
     .org 0x480
-    /* EJTAG debug exception */
+;    /* EJTAG debug exception */
 1:  b   1b
-     nop
+    NOP
 
 FUNC_END(vector)
 
@@ -112,40 +115,40 @@ FUNC_END(vector)
 FUNC_DEF(reset)
 
 ;    /* Clear watch registers */
-    MTC0    zero, CP0_WATCHLO
-    MTC0    zero, CP0_WATCHHI
+    MTC0(ZERO, CP0_WATCHLO)
+    MTC0(ZERO, CP0_WATCHHI)
 
 ;    /* WP(Watch Pending), SW0/1 should be cleared */
-    mtc0    zero, CP0_CAUSE
+    MTC0(ZERO, CP0_CAUSE)
 
     setup_c0_status STATUS_SET 0
 
 ;    /* Init Timer */
-    mtc0    zero, CP0_COUNT
-    mtc0    zero, CP0_COMPARE
+    MTC0(ZERO, CP0_COUNT)
+    MTC0(ZERO, CP0_COMPARE)
 
 ;    /* CONFIG0 register */
-    li      t0, CONF_CM_UNCACHED
-    mtc0    t0, CP0_CONFIG
+    LI      T0 ,    CONF_CM_UNCACHED
+    MTC0(T0,   CP0_CONFIG)
 
     .align  2
-    bal     1f
-    nop
-    PTR _gp
+    BAL   1f
+    NOP
+    PTR   _gp
 
 1:
-    PTR_L   gp, 0(ra)
+    LW      GP ,    0(RA)
 
 ;/*********************************************************************************************************
-;  TODO 在这里加入初始化最核心硬件接口 (有 BOOTLOADER 就不需要初始化 SDRAM 与 PLL)
+;  在这里加入初始化最核心硬件接口 (有 BOOTLOADER 就不需要初始化 SDRAM 与 PLL)
 ;*********************************************************************************************************/
 
 ;    /* Initialize any external memory */
-    PTR_LA  t9, lowlevel_init
-    jalr    t9
-    nop
+    LA      T9 ,  lowlevel_init
+    JALR    T9
+    NOP
 
-;    /* Initialize caches... */
+;   /* Initialize caches... */
     ;//PTR_LA  t9, mips_cache_reset
     ;//jalr    t9
     ;//nop
@@ -159,55 +162,55 @@ FUNC_DEF(reset)
 ;*********************************************************************************************************/
 
 ;    /* Set up temporary stack */
-    PTR_LI  t0, -16
-    PTR_LI  t1, BSP_CFG_SYS_INIT_SP_ADDR
-    and sp, t1, t0      ;# force 16 byte alignment
-    move    fp, sp
+    LI      T0 ,   -16
+    LI      T1 ,   BSP_CFG_SYS_INIT_SP_ADDR
+    AND     SP ,   T1 ,   T0                                                   ;/* force 16 byte alignment     */
+    MOV     FP ,   SP
 
 ;/*********************************************************************************************************
 ;  初始化 DATA 段
 ;*********************************************************************************************************/
-    /*
-     * t0 = source address
-     * t1 = target address
-     * t2 = source end address
-     */
-    PTR_LA  t0, _etext
-    PTR_LA  t1, _data
-    PTR_LA  t2, _edata
+;    /*
+;     * t0 = source address
+;     * t1 = target address
+;     * t2 = source end address
+;     */
+    LA      T0 ,   _etext
+    LA      T1 ,   _data
+    LA      T2 ,   _edata
 
 1:
-    lw  t3, 0(t0)
-    sw  t3, 0(t1)
-    PTR_ADDU t0, 4
-    blt t1, t2, 1b
-    PTR_ADDU t1, 4  ;/*指令优化，流水线*/
+    LW      T3 ,   0(T0)
+    SW      T3 ,   0(T1)
+    ADDU    T0 ,   4
+    BLT     T1 ,   T2,  1b
+    ADDU    T1 ,   4                                                    ;/*指令优化，流水线             */
 
 ;/*********************************************************************************************************
 ;  清零 BSS 段
 ;*********************************************************************************************************/
 
-    /*
-     * Clear BSS
-     *
-     * GOT is now relocated. Thus __bss_start and __bss_end can be
-     * accessed directly via $gp.
-     */
-    PTR_LA  t1, __bss_start
-    PTR_LA  t2, __bss_end
+;    /*
+;     * Clear BSS
+;     *
+;     * GOT is now relocated. Thus __bss_start and __bss_end can be
+;     * accessed directly via $gp.
+;     */
+    LA      T1 ,   __bss_start
+    LA      T2 ,   __bss_end
 
 1:
-    PTR_S   zero, 0(t1)
-    blt t1, t2, 1b
-    PTR_ADDI t1, PTRSIZE
+    SW      ZERO , 0(T1)
+    BLT     T1 ,   T2 ,  1b
+    ADDI    T1 ,   PTRSIZE
 
 ;/*********************************************************************************************************
 ;  进入 bspInit 函数 (argc = 0, argv = NULL, frame pointer = NULL)
 ;*********************************************************************************************************/
 
-    PTR_LA   t9, bspInit
-    jr       t9
-    nop
+    LA      T9 ,   bspInit
+    JR      T9
+    NOP
 
 FUNC_END(reset)
 
@@ -221,29 +224,28 @@ FUNC_DEF(lowlevel_init)
 ;     * Step 2) Establish Status Register
 ;     * (set BEV, clear ERL, clear EXL, clear IE)
 ;     */
-    li  t1, 0x00400000
-    mtc0    t1, CP0_STATUS
+    LI      T1 ,   0x00400000
+    MTC0(T1,   CP0_STATUS)
 
 ;    /*
 ;     * Step 3) Establish CP0 Config0
 ;     * (set K0=3)
 ;     */
-    li  t1, 0x00000003
-    mtc0    t1, CP0_CONFIG
+    LI      T1 ,   0x00000003
+    MTC0(T1,   CP0_CONFIG)
 
 ;    /*
 ;     * Step 7) Establish Cause
 ;     * (set IV bit)
 ;     */
-    li  t1, 0x00800000
-    mtc0    t1, CP0_CAUSE
+    LI      T1 ,   0x00800000
+    MTC0(T1,   CP0_CAUSE)
 
 ;    /* Establish Wired (and Random) */
-    mtc0    zero, CP0_WIRED
-    nop
+    MTC0(ZERO, CP0_WIRED)
 
-    jr  ra
-    nop
+    JR      RA
+    NOP
 FUNC_END(lowlevel_init)
 
 ;/*********************************************************************************************************
@@ -251,45 +253,11 @@ FUNC_END(lowlevel_init)
 ;*********************************************************************************************************/
 
 FUNC_DEF(mips_cache_reset)
-    li  t2, BSP_CFG_SYS_ICACHE_SIZE
-    li  t8, BSP_CFG_SYS_CACHELINE_SIZE
-
-    li  t3, BSP_CFG_SYS_DCACHE_SIZE
-    li  t9, BSP_CFG_SYS_CACHELINE_SIZE
-
-;    /*
-;     * The TagLo registers used depend upon the CPU implementation, but the
-;     * architecture requires that it is safe for software to write to both
-;     * TagLo selects 0 & 2 covering supported cases.
-;     */
-    mtc0   zero, CP0_TAGLO
-    mtc0   zero, CP0_TAGLO, 2
-
-;    /*
-;     * Initialize the I-cache first,
-;     */
-
-    blez        t2, 1f
-    PTR_LI      t0, BSP_CFG_INDEX_BASE
-    PTR_ADDU    t1, t0, t2
-    /* clear tag to invalidate */
-    cache_loop  t0, t1, t8, BSP_CFG_INDEX_STORE_TAG_I
-
-;    /*
-;     * then initialize D-cache.
-;     */
-
-1:  blez        t3, 3f
-    PTR_LI      t0, BSP_CFG_INDEX_BASE
-    PTR_ADDU    t1, t0, t3
-    /* clear all tags */
-    cache_loop  t0, t1, t9, BSP_CFG_INDEX_STORE_TAG_D
-
-3:  jr  ra
-    nop
+    JR      RA
+    NOP
 FUNC_END(mips_cache_reset)
 
-FILE_END()
+    FILE_END()
 
 ;/*********************************************************************************************************
 ;  END

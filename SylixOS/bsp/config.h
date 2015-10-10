@@ -12,7 +12,7 @@
 **
 ** 文   件   名: config.h
 **
-** 创   建   人: Ryan.xin (韩辉)
+** 创   建   人: Ryan.xin (信金龙)
 **
 ** 文件创建日期: 2015 年 09 月 09 日
 **
@@ -42,6 +42,11 @@
 #define STATUS_SET                  0
 
 #define CONF_CM_UNCACHED            2
+
+#define BSP_INT_NUMS                8
+
+
+#define BSP_CFG_16C550_SIO_NR       1
 
 
 /*-----------------------------------------------------------------------
