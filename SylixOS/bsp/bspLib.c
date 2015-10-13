@@ -26,6 +26,7 @@
 *********************************************************************************************************/
 #include "driver/tty/8250_uart.h"                                       /*  调试端口                    */
 #include "driver/sio_poll/sio.h"
+#include "arch/mips/common/cp0/mipsCp0.h"
 
 static const CHAR   _G_pcCpuInfo[]     = "MIPS QEMU32BITEL (24KF /101MHz NonFPU)";
 static const CHAR   _G_pcCacheInfo[]   = "32KBytes L1-Cache (D-16K/I-16K)";
@@ -35,10 +36,6 @@ static const CHAR   _G_pcVersionInfo[] = "BSP version 1.0.2 for GEMINI";
   中断相关
 *********************************************************************************************************/
 #include <arch/assembler.h>
-
-UINT32  CP0_wGetSR (VOID);
-UINT32  CP0_wGetCAUSE (VOID);
-VOID    CP0_wSetSR (UINT32  uiCP0Status);
 
 /*********************************************************************************************************
 ** 函数名称: bspIntInit
@@ -70,13 +67,13 @@ VOID  bspIntInit (VOID)
 *********************************************************************************************************/
 VOID  bspIntHandle (VOID)
 {
-    REGISTER UINT32  uiCause  = CP0_wGetCAUSE();
+    REGISTER UINT32  uiCause  = mipsCp0CauseRead();
 
     if ((uiCause & M_CauseExcCode) == EX_INT) {
 
         REGISTER UINT32  uiVector    = 0;
 
-        REGISTER UINT32  uiCP0Status = CP0_wGetSR();
+        REGISTER UINT32  uiCP0Status = mipsCp0StatusRead();
 
         uiCP0Status  &= M_StatusIM;
         uiCP0Status >>= S_StatusIM;
@@ -107,11 +104,11 @@ VOID  bspIntHandle (VOID)
 VOID  bspIntVectorEnable (ULONG  ulVector)
 {
     if (ulVector < BSP_INT_NUMS) {
-        REGISTER UINT32  uiCP0Status = CP0_wGetSR();
+        REGISTER UINT32  uiCP0Status = mipsCp0StatusRead();
 
         uiCP0Status |= 1 << (ulVector + S_StatusIM);
 
-        CP0_wSetSR(uiCP0Status);
+        mipsCp0StatusWrite(uiCP0Status);
     }
 }
 /*********************************************************************************************************
@@ -125,11 +122,11 @@ VOID  bspIntVectorEnable (ULONG  ulVector)
 VOID  bspIntVectorDisable (ULONG  ulVector)
 {
     if (ulVector < BSP_INT_NUMS) {
-        REGISTER UINT32  uiCP0Status = CP0_wGetSR();
+        REGISTER UINT32  uiCP0Status = mipsCp0StatusRead();
 
         uiCP0Status &= ~(1 << (ulVector + S_StatusIM));
 
-        CP0_wSetSR(uiCP0Status);
+        mipsCp0StatusWrite(uiCP0Status);
     }
 }
 /*********************************************************************************************************
@@ -143,7 +140,7 @@ VOID  bspIntVectorDisable (ULONG  ulVector)
 BOOL  bspIntVectorIsEnable (ULONG  ulVector)
 {
     if (ulVector < BSP_INT_NUMS) {
-        REGISTER UINT32  uiCP0Status = CP0_wGetSR();
+        REGISTER UINT32  uiCP0Status = mipsCp0StatusRead();
 
         uiCP0Status  &= M_StatusIM;
         uiCP0Status >>= S_StatusIM;
@@ -584,13 +581,13 @@ static VOID  __tickThread (VOID)
 *********************************************************************************************************/
 static irqreturn_t  __tickTimerIsr (VOID)
 {
-    UINT32  uiCompare = CP0_wGet_COMPARE() + BSP_TMR_RELOAD;
-    UINT32  uiCount   = CP0_wGet_COUNT();
+    UINT32  uiCompare = mipsCp0CompareRead() + BSP_TMR_RELOAD;
+    UINT32  uiCount   = mipsCp0CountRead();
 
     if (uiCompare < uiCount) {
         uiCompare = uiCount;
     }
-    CP0_wSet_COMPARE(uiCompare);                                        /*  清除 tick 定时器中断        */
+    mipsCp0CompareWrite(uiCompare);                                     /*  清除 tick 定时器中断        */
 
     API_KernelTicksContext();                                           /*  保存被时钟中断的线程控制块  */
 
@@ -630,12 +627,12 @@ VOID  bspTickInit (VOID)
                                      &threakattr, LW_NULL);
 #endif                                                                  /*  TICK_IN_THREAD > 0          */
 
-    UINT32  uiIntCtl = CP0_wGet_INTCTL();
+    UINT32  uiIntCtl = mipsCp0IntCtlRead();
 
     ulVector = ((uiIntCtl & M_IntCtlIPPI) >> S_IntCtlIPPI);
 
-    CP0_wSet_COUNT(0);
-    CP0_wSet_COMPARE(BSP_TMR_RELOAD);
+    mipsCp0CountWrite(0);
+    mipsCp0CompareWrite(BSP_TMR_RELOAD);
 
     API_InterVectorConnect(ulVector,
                            (PINT_SVR_ROUTINE)__tickTimerIsr,
