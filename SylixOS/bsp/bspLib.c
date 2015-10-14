@@ -69,7 +69,9 @@ VOID  bspIntHandle (VOID)
 {
     REGISTER UINT32  uiCause  = mipsCp0CauseRead();
 
-    if ((uiCause & M_CauseExcCode) == EX_INT) {
+    UINT32  uiExcCode = ((uiCause & M_CauseExcCode) >> S_CauseExcCode);
+
+    if (uiExcCode == EX_INT) {
 
         REGISTER UINT32  uiVector    = 0;
 
@@ -89,6 +91,7 @@ VOID  bspIntHandle (VOID)
             }
         }
     } else {
+        _DebugFormat(__ERRORMESSAGE_LEVEL, "Unknow exception: %d\r\n", uiExcCode);
         while (1) {
         }
     }

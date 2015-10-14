@@ -348,7 +348,7 @@ static VOID  halShellInit (VOID)
 
 static VOID  halVmmInit (VOID)
 {
-    API_VmmLibInit(_G_zonedescGlobal, _G_globaldescMap, MIPS_MACHINE_NONE);
+    API_VmmLibInit(_G_zonedescGlobal, _G_globaldescMap, MIPS_MACHINE_24KF);
     API_VmmMmuEnable();
 }
 
@@ -717,10 +717,10 @@ static VOID  usrStartup (VOID)
     halTimeInit();
 #endif                                                                  /*  LW_CFG_RTC_EN > 0           */
 
-//#if LW_CFG_VMM_EN > 0
-//    halVmmInit();
-//#endif                                                                  /*  LW_CFG_VMM_EN > 0           */
-//
+#if LW_CFG_VMM_EN > 0
+    halVmmInit();
+#endif                                                                  /*  LW_CFG_VMM_EN > 0           */
+
 //#if LW_CFG_CACHE_EN > 0
 //    halCacheInit();
 //#endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
