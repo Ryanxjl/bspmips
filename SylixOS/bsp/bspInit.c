@@ -120,7 +120,7 @@ static VOID  halIdleInit (VOID)
 
 static VOID  halCacheInit (VOID)
 {
-    API_CacheLibInit(CACHE_COPYBACK, CACHE_COPYBACK, MIPS_MACHINE_NONE);/*  初始化 CACHE 系统           */
+    API_CacheLibInit(CACHE_COPYBACK, CACHE_COPYBACK, MIPS_MACHINE_24KF);/*  初始化 CACHE 系统           */
     API_CacheEnable(INSTRUCTION_CACHE);
     API_CacheEnable(DATA_CACHE);                                        /*  使能 CACHE                  */
 }
@@ -138,7 +138,7 @@ static VOID  halCacheInit (VOID)
 
 static VOID  halFpuInit (VOID)
 {
-    API_KernelFpuInit(ARM_MACHINE_920, ARM_FPU_NONE);
+    API_KernelFpuInit(MIPS_MACHINE_24KF, ARM_FPU_NONE);
 }
 
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
@@ -764,7 +764,8 @@ INT bspInit (VOID)
      *  这里使用 bsp 设置启动参数, 如果 bootloader 支持, 可使用 bootloader 设置.
      *  为了兼容以前的项目, 这里 kfpu=yes 允许内核中(包括中断)使用 FPU.
      */
-    API_KernelStartParam("ncpus=1 kdlog=yes kderror=yes kfpu=no heapchk=yes hz=100");
+    API_KernelStartParam("ncpus=1 kdlog=yes kderror=yes kfpu=no heapchk=yes hz=100 "
+                         "varea=0xc0000000 vsize=0x3fffe000");
                                                                         /*  操作系统启动参数设置        */
     API_KernelStart(usrStartup,
                     cKernelHeap,

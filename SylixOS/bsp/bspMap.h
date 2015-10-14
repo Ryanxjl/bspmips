@@ -39,13 +39,14 @@
 
 LW_VMM_ZONE_DESC    _G_zonedescGlobal[] = {
     {
-            BSP_CFG_RAM_BASE + BSP_CFG_COMMON_MEM_SIZE,
+            BSP_CFG_RAM_PA_BASE + BSP_CFG_COMMON_MEM_SIZE,
             (BSP_CFG_RAM_SIZE - BSP_CFG_COMMON_MEM_SIZE) / 2,
             LW_ZONE_ATTR_DMA                                            /*  均可被 DMA 使用             */
     },
 
     {
-            BSP_CFG_RAM_BASE + BSP_CFG_COMMON_MEM_SIZE + (BSP_CFG_RAM_SIZE - BSP_CFG_COMMON_MEM_SIZE) / 2,
+            BSP_CFG_RAM_PA_BASE + BSP_CFG_COMMON_MEM_SIZE +
+            (BSP_CFG_RAM_SIZE - BSP_CFG_COMMON_MEM_SIZE) / 2,
             (BSP_CFG_RAM_SIZE - BSP_CFG_COMMON_MEM_SIZE) / 2,
             LW_ZONE_ATTR_DMA                                            /*  均可被 DMA 使用             */
     },
@@ -55,12 +56,6 @@ LW_VMM_ZONE_DESC    _G_zonedescGlobal[] = {
 *********************************************************************************************************/
 
 LW_MMU_GLOBAL_DESC  _G_globaldescMap[] = {
-    {
-            0xc0000000,
-            0x1fc00000,
-            2 * LW_CFG_MB_SIZE,
-            LW_VMM_FLAG_DMA
-    },
     {
             0,
             0,

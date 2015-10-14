@@ -21,22 +21,21 @@
 #define  __SYLIXOS_KERNEL
 #include "config.h"
 #include "SylixOS.h"
+
+#include "driver/tty/8250_uart.h"
+#include "driver/sio_poll/sio.h"
+#include "arch/mips/common/cp0/mipsCp0.h"
 /*********************************************************************************************************
   BSP 信息
 *********************************************************************************************************/
-#include "driver/tty/8250_uart.h"                                       /*  调试端口                    */
-#include "driver/sio_poll/sio.h"
-#include "arch/mips/common/cp0/mipsCp0.h"
-
-static const CHAR   _G_pcCpuInfo[]     = "MIPS QEMU32BITEL (24KF /101MHz NonFPU)";
-static const CHAR   _G_pcCacheInfo[]   = "32KBytes L1-Cache (D-16K/I-16K)";
-static const CHAR   _G_pcPacketInfo[]  = "Qemumipsel Packet";
-static const CHAR   _G_pcVersionInfo[] = "BSP version 1.0.2 for GEMINI";
+static const CHAR   _G_pcCpuInfo[]     = "MIPS 24KF(500MHz NonFPU)";
+static const CHAR   _G_pcCacheInfo[]   = "32KBytes L1-Cache(D-16K/I-16K)";
+static const CHAR   _G_pcPacketInfo[]  = "QEMU MIPS r4k platform";
+static const CHAR   _G_pcVersionInfo[] = "BSP version 0.2.0 for GEMINI";
 /*********************************************************************************************************
-  中断相关
+  中断系统相关函数
 *********************************************************************************************************/
-#include <arch/assembler.h>
-
+#define BSP_INT_NUMS                8
 /*********************************************************************************************************
 ** 函数名称: bspIntInit
 ** 功能描述: 中断系统初始化
@@ -67,32 +66,21 @@ VOID  bspIntInit (VOID)
 *********************************************************************************************************/
 VOID  bspIntHandle (VOID)
 {
-    REGISTER UINT32  uiCause  = mipsCp0CauseRead();
+    REGISTER UINT32  uiCause     = mipsCp0CauseRead();
+    REGISTER UINT32  uiCP0Status = mipsCp0StatusRead();
+    REGISTER UINT32  uiVector;
 
-    UINT32  uiExcCode = ((uiCause & M_CauseExcCode) >> S_CauseExcCode);
+    uiCP0Status  &= M_StatusIM;
+    uiCP0Status >>= S_StatusIM;
 
-    if (uiExcCode == EX_INT) {
+    uiCause  &= M_CauseIP;
+    uiCause >>= S_CauseIP;
 
-        REGISTER UINT32  uiVector    = 0;
+    uiCause &= uiCP0Status;
 
-        REGISTER UINT32  uiCP0Status = mipsCp0StatusRead();
-
-        uiCP0Status  &= M_StatusIM;
-        uiCP0Status >>= S_StatusIM;
-
-        uiCause  &= M_CauseIP;
-        uiCause >>= S_CauseIP;
-
-        uiCause &= uiCP0Status;
-
-        for (uiVector = 0; uiVector < BSP_INT_NUMS; uiVector++) {
-            if (uiCause & (1 << uiVector)) {
-                archIntHandle((ULONG)uiVector, LW_FALSE);
-            }
-        }
-    } else {
-        _DebugFormat(__ERRORMESSAGE_LEVEL, "Unknow exception: %d\r\n", uiExcCode);
-        while (1) {
+    for (uiVector = 0; uiVector < BSP_INT_NUMS; uiVector++) {
+        if (uiCause & (1 << uiVector)) {
+            archIntHandle((ULONG)uiVector, LW_FALSE);
         }
     }
 }
@@ -408,9 +396,6 @@ VOID  bspDebugMsg (CPCHAR  pcMsg)
     uart8250PutStr((addr_t)0xb40003f8, pcMsg);
 }
 /*********************************************************************************************************
-  CACHE 相关接口
-*********************************************************************************************************/
-/*********************************************************************************************************
   MMU 相关接口
 *********************************************************************************************************/
 /*********************************************************************************************************
@@ -545,12 +530,6 @@ VOID    bspCpuPowerGet (UINT  *puiPowerLevel)
 #if TICK_IN_THREAD > 0
 static LW_HANDLE    htKernelTicks;                                      /*  操作系统时钟服务线程句柄    */
 #endif                                                                  /*  TICK_IN_THREAD > 0          */
-
-UINT32  CP0_wGet_COUNT (VOID);
-UINT32  CP0_wGet_COMPARE (VOID);
-VOID    CP0_wSet_COUNT (UINT32 uiCount);
-VOID    CP0_wSet_COMPARE (UINT32 uiCompare);
-UINT32  CP0_wGet_INTCTL (VOID);
 
 #define BSP_TMR_RELOAD      (500 * 1000 * 1000 / (2 * LW_TICK_HZ))
 

@@ -71,39 +71,35 @@ SECTIONS
 *********************************************************************************************************/
 
     . = ALIGN(4);
-    .ctors :
-    {
+    .ctors : {
         KEEP (*cppRtBegin*.o(.ctors))
         KEEP (*(.preinit_array))
         KEEP (*(.init_array))
         KEEP (*(SORT(.ctors.*)))
         KEEP (*(.ctors))
         KEEP (*cppRtEnd*.o(.ctors))
-    }  > ROM
+    } > ROM
   
-    .dtors :
-    {
+    .dtors : {
         KEEP (*cppRtBegin*.o(.dtors))
         KEEP (*(.fini_array))
         KEEP (*(SORT(.dtors.*)))
         KEEP (*(.dtors))
         KEEP (*cppRtEnd*.o(.dtors))
-    }  > ROM
+    } > ROM
 
 /*********************************************************************************************************
     .Build OK
 *********************************************************************************************************/
     
-    .eh_frame_hdr : ALIGN (4)
-    {
+    .eh_frame_hdr : ALIGN (4) {
         KEEP (*(.eh_frame_hdr))
         *(.eh_frame_entry .eh_frame_entry.*)
     }  > ROM
     
-    .eh_frame : ALIGN (4)
-    {
+    .eh_frame : ALIGN (4) {
         KEEP (*(.eh_frame)) *(.eh_frame.*)
-    } >ROM
+    } > ROM
 
 /*********************************************************************************************************
     .data 段数据初始化内容放在这里
@@ -139,14 +135,12 @@ SECTIONS
         *(.got)
     } > RAM
     
-    
     num_got_entries = SIZEOF(.got) >> 2;
 
     .sdata : ALIGN(4){
         *(.sdata*)
-    } >RAM
+    } > RAM
 
-    
 /*********************************************************************************************************
     清零段
 

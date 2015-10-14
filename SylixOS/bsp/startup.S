@@ -34,6 +34,8 @@
 
     IMPORT_LABEL(bspInit)
     IMPORT_LABEL(archInterruptEntry)
+    IMPORT_LABEL(archCacheErrorEntry)
+    IMPORT_LABEL(archExceptionEntry)
 
 ;/*********************************************************************************************************
 ;  cache_loop
@@ -46,73 +48,34 @@ MACRO_DEF(cache_loop   curr, end, line_sz, op)
 MACRO_END()
 
 ;/*********************************************************************************************************
-;  setup_c0_status
-;*********************************************************************************************************/
-
-MACRO_DEF(setup_c0_status set clr)
-    .set push
-    MFC0(T0, CP0_STATUS)
-    OR      T0 , M_StatusCU0 | \set | 0x1f | \clr
-    XOR     T0 , 0X1F | \clr
-    MTC0(T0, CP0_STATUS)
-    .set noreorder
-    SLL     ZERO , 3
-    .set pop
-MACRO_END()
-
-;/*********************************************************************************************************
 ;  异常向量表
 ;*********************************************************************************************************/
 
     SECTION(.vector)
 
 FUNC_DEF(vector)
-    ;/* SylixOS entry point */
-     B      reset
+     B      reset                                                       ;/*  SylixOS entry point         */
      NOP
 
-    .org 0x10
+    .org    0x10
 
-    .org 0x200
-    ;/* TLB refill, 32 bit task */
-    .set push
-    .set noreorder
-    .set noat
-    MFC0    K1, CP0_CTXT
-    LW      K0, 0(K1)
-    LW      K1, 8(K1)
-    MTC0    K0, CP0_TLBLO0
-    MTC0    K1, CP0_TLBLO1
-    EHB
-    TLBWR
-    ERET
-    .set pop
+    .org    0x200                                                       ;/*  TLB refill, 32 bit task     */
+    MIPS32_TLB_REFILL_HANDLE()
 
-    .org 0x280
-    ;/* XTLB refill, 64 bit task */
-1:  B   1b
-    NOP
+    .org    0x280                                                       ;/*  XTLB refill, 64 bit task    */
+1:  B       1b
 
-    .org 0x300
-    ;/* Cache error exception */
-1:  B   1b
-    NOP
+    .org    0x300                                                       ;/*  Cache error exception       */
+    MIPS_CACHE_ERROR_HANDLE()
 
-    .org 0x380
-    ;/* General exception */
-    LA   T7 , archInterruptEntry
-    JR   T7
-    NOP
+    .org    0x380                                                       ;/*  General exception           */
+    MIPS_EXCEPTION_HANDLE()
 
-    .org 0x400
-    ;/* Catch interrupt exceptions */
-    LA   T7 , archInterruptEntry
-    JR   T7
-    NOP
+    .org    0x400                                                       ;/*  Catch interrupt exceptions  */
+    MIPS_INTERRUPT_HANDLE()
 
-    .org 0x480
-    ;/* EJTAG debug exception */
-1:  B   1b
+    .org    0x480                                                       ;/*  EJTAG debug exception       */
+1:  B       1b
     NOP
 
 FUNC_END(vector)
@@ -132,14 +95,14 @@ FUNC_DEF(reset)
     ;/* WP(Watch Pending), SW0/1 should be cleared */
     MTC0(ZERO, CP0_CAUSE)
 
-    setup_c0_status STATUS_SET 0
+    MTC0(ZERO, CP0_STATUS)
 
     ;/* Init Timer */
     MTC0(ZERO, CP0_COUNT)
     MTC0(ZERO, CP0_COMPARE)
 
     ;/* CONFIG0 register */
-    LI      T0 , CONF_CM_UNCACHED
+    LI      T0 , MIPS_UNCACHED
     MTC0(T0,   CP0_CONFIG)
 
     .align  2
@@ -180,9 +143,9 @@ FUNC_DEF(reset)
 ;  初始化 DATA 段
 ;*********************************************************************************************************/
     ;/*
-    ; * t0 = source address
-    ; * t1 = target address
-    ; * t2 = source end address
+    ; * T0 = source address
+    ; * T1 = target address
+    ; * T2 = source end address
     ; */
     LA      T0 , _etext
     LA      T1 , _data
