@@ -21,22 +21,21 @@
 #define  __SYLIXOS_KERNEL
 #include "config.h"
 #include "SylixOS.h"
+
+#include "driver/tty/8250_uart.h"
+#include "driver/sio_poll/sio.h"
+#include "arch/mips/common/cp0/mipsCp0.h"
 /*********************************************************************************************************
   BSP 信息
 *********************************************************************************************************/
-#include "driver/tty/8250_uart.h"                                       /*  调试端口                    */
-#include "driver/sio_poll/sio.h"
-
-static const CHAR   _G_pcCpuInfo[]     = "MIPS QEMU32BITEL (24KF /101MHz NonFPU)";
-static const CHAR   _G_pcCacheInfo[]   = "32KBytes L1-Cache (D-16K/I-16K)";
-static const CHAR   _G_pcPacketInfo[]  = "Qemumipsel Packet";
-static const CHAR   _G_pcVersionInfo[] = "BSP version 1.0.2 for GEMINI";
+static const CHAR   _G_pcCpuInfo[]     = "MIPS 24KF(500MHz NonFPU)";
+static const CHAR   _G_pcCacheInfo[]   = "32KBytes L1-Cache(D-16K/I-16K)";
+static const CHAR   _G_pcPacketInfo[]  = "QEMU MIPS r4k platform";
+static const CHAR   _G_pcVersionInfo[] = "BSP version 0.2.0 for GEMINI";
 /*********************************************************************************************************
-  中断相关
+  中断系统相关函数
 *********************************************************************************************************/
-#include <arch/assembler.h>
-#include <arch/mips/common/cp0/mipsCp0.h>
-
+#define BSP_INT_NUMS                8
 /*********************************************************************************************************
 ** 函数名称: bspIntInit
 ** 功能描述: 中断系统初始化
@@ -67,29 +66,21 @@ VOID  bspIntInit (VOID)
 *********************************************************************************************************/
 VOID  bspIntHandle (VOID)
 {
-    REGISTER UINT32  uiCause  = mipsCp0CauseRead();
+    REGISTER UINT32  uiCause     = mipsCp0CauseRead();
+    REGISTER UINT32  uiCP0Status = mipsCp0StatusRead();
+    REGISTER UINT32  uiVector;
 
-    if ((uiCause & M_CauseExcCode) == EX_INT) {
+    uiCP0Status  &= M_StatusIM;
+    uiCP0Status >>= S_StatusIM;
 
-        REGISTER UINT32  uiVector    = 0;
+    uiCause  &= M_CauseIP;
+    uiCause >>= S_CauseIP;
 
-        REGISTER UINT32  uiCP0Status = mipsCp0StatusRead();
+    uiCause &= uiCP0Status;
 
-        uiCP0Status  &= M_StatusIM;
-        uiCP0Status >>= S_StatusIM;
-
-        uiCause  &= M_CauseIP;
-        uiCause >>= S_CauseIP;
-
-        uiCause &= uiCP0Status;
-
-        for (uiVector = 0; uiVector < BSP_INT_NUMS; uiVector++) {
-            if (uiCause & (1 << uiVector)) {
-                archIntHandle((ULONG)uiVector, LW_FALSE);
-            }
-        }
-    } else {
-        while (1) {
+    for (uiVector = 0; uiVector < BSP_INT_NUMS; uiVector++) {
+        if (uiCause & (1 << uiVector)) {
+            archIntHandle((ULONG)uiVector, LW_FALSE);
         }
     }
 }
@@ -405,9 +396,6 @@ VOID  bspDebugMsg (CPCHAR  pcMsg)
     uart8250PutStr((addr_t)0xb40003f8, pcMsg);
 }
 /*********************************************************************************************************
-  CACHE 相关接口
-*********************************************************************************************************/
-/*********************************************************************************************************
   MMU 相关接口
 *********************************************************************************************************/
 /*********************************************************************************************************
@@ -581,7 +569,7 @@ static irqreturn_t  __tickTimerIsr (VOID)
     if (uiCompare < uiCount) {
         uiCompare = uiCount;
     }
-    mipsCp0CompareWrite(uiCompare);                                        /*  清除 tick 定时器中断        */
+    mipsCp0CompareWrite(uiCompare);                                     /*  清除 tick 定时器中断        */
 
     API_KernelTicksContext();                                           /*  保存被时钟中断的线程控制块  */
 
