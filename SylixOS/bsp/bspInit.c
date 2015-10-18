@@ -33,9 +33,8 @@
 /*********************************************************************************************************
   BSP 及 驱动程序
 *********************************************************************************************************/
-#include "driver/tty/8250_uart.h"                                       /*  调试端口                    */
-#include "driver/sio_poll/sio.h"
-#include "driver/sio/16c550_sio.h"
+#include "driver/8250/8250_uart.h"                                      /*  调试端口                    */
+#include "driver/16c550/16c550_sio.h"
 /*********************************************************************************************************
   操作系统符号表
 *********************************************************************************************************/
@@ -257,7 +256,7 @@ static VOID  halDevInit (VOID)
     shmDevCreate();                                                     /*  创建共享内存设备            */
     randDevCreate();                                                    /*  创建随机数文件              */
 
-    SIO_CHAN    *psio0 = sioChanCreatePoll(0);                          /*  创建串口 0 通道             */
+    SIO_CHAN    *psio0 = sioChan16C550Create(0);                          /*  创建串口 0 通道             */
     ttyDevCreate("/dev/ttyS0", psio0, 30, 50);                          /*  add    tty   device         */
 
     yaffsDevCreate("/yaffs2");                                          /*  create yaffs device(only fs)*/
@@ -539,63 +538,22 @@ static VOID  halStdDirInit (VOID)
      *  其余挂载点需要通过手动创建, 例如: /etc /bin /sbin /tmp 等等,
      *  一般来说 /tmp /bin /sbin /ftk /etc ... 可以做成链接文件, 链接到指定的文件系统.
      */
-    mkdir("/usb", DEFAULT_DIR_PERM);
-    if (access("/yaffs2/n0/boot", R_OK) < 0) {
-        mkdir("/yaffs2/n0/boot", DEFAULT_DIR_PERM);
-    }
-    if (access("/yaffs2/n0/etc", R_OK) < 0) {
-        mkdir("/yaffs2/n0/etc", DEFAULT_DIR_PERM);
-    }
-    if (access("/yaffs2/n1/ftk", R_OK) < 0) {
-        mkdir("/yaffs2/n1/ftk", DEFAULT_DIR_PERM);
-    }
-    if (access("/yaffs2/n1/qt", R_OK) < 0) {
-        mkdir("/yaffs2/n1/qt", DEFAULT_DIR_PERM);
-    }
-    if (access("/yaffs2/n1/lib", R_OK) < 0) {
-        mkdir("/yaffs2/n1/lib", DEFAULT_DIR_PERM);
-        mkdir("/yaffs2/n1/lib/modules", DEFAULT_DIR_PERM);
-    }
-    if (access("/yaffs2/n1/usr", R_OK) < 0) {
-        mkdir("/yaffs2/n1/usr", DEFAULT_DIR_PERM);
-        mkdir("/yaffs2/n1/usr/lib", DEFAULT_DIR_PERM);
-    }
-    if (access("/yaffs2/n1/bin", R_OK) < 0) {
-        mkdir("/yaffs2/n1/bin", DEFAULT_DIR_PERM);
-    }
-    if (access("/yaffs2/n1/tmp", R_OK) < 0) {
-        mkdir("/yaffs2/n1/tmp", DEFAULT_DIR_PERM);
-    }
-    if (access("/yaffs2/n1/sbin", R_OK) < 0) {
-        mkdir("/yaffs2/n1/sbin", DEFAULT_DIR_PERM);
-    }
-    if (access("/yaffs2/n1/apps", R_OK) < 0) {
-        mkdir("/yaffs2/n1/apps", DEFAULT_DIR_PERM);
-    }
-    if (access("/yaffs2/n1/home", R_OK) < 0) {
-        mkdir("/yaffs2/n1/home", DEFAULT_DIR_PERM);
-    }
-    if (access("/yaffs2/n1/root", R_OK) < 0) {
-        mkdir("/yaffs2/n1/root", DEFAULT_DIR_PERM);
-    }
-    if (access("/yaffs2/n1/var", R_OK) < 0) {
-        mkdir("/yaffs2/n1/var", DEFAULT_DIR_PERM);
-    }
+    API_Mount("0", "/etc", "ramfs");
+    API_Mount("0", "/tmp", "ramfs");
 
-    symlink("/yaffs2/n0/boot", "/boot");
-    symlink("/yaffs2/n0/etc",  "/etc");                                 /*  创建根目录符号链接          */
-    symlink("/yaffs2/n1/ftk",  "/ftk");                                 /*  创建 FTK 图形系统符号链接   */
-    symlink("/yaffs2/n1/qt",   "/qt");                                  /*  创建 Qt 图形系统符号链接    */
-    symlink("/yaffs2/n1/lib",  "/lib");
-    symlink("/yaffs2/n1/usr",  "/usr");
-    symlink("/yaffs2/n1/bin",  "/bin");
-    symlink("/yaffs2/n1/sbin", "/sbin");
-    symlink("/yaffs2/n1/apps", "/apps");
-    symlink("/yaffs2/n1/home", "/home");
-    symlink("/yaffs2/n1/root", "/root");
-    symlink("/yaffs2/n1/var",  "/var");
-    symlink("/yaffs2/n1/tmp",  "/var/tmp");
-    symlink("/yaffs2/n1/tmp",  "/tmp");
+    mkdir("/usb", DEFAULT_DIR_PERM);
+    mkdir("/boot", DEFAULT_DIR_PERM);
+    mkdir("/ftk", DEFAULT_DIR_PERM);                                    /*  创建 FTK 图形系统符号链接   */
+    mkdir("/qt", DEFAULT_DIR_PERM);                                     /*  创建 Qt 图形系统符号链接    */
+    mkdir("/lib", DEFAULT_DIR_PERM);
+    mkdir("/usr", DEFAULT_DIR_PERM);
+    mkdir("/bin", DEFAULT_DIR_PERM);
+    mkdir("/sbin", DEFAULT_DIR_PERM);
+    mkdir("/apps", DEFAULT_DIR_PERM);
+    mkdir("/home", DEFAULT_DIR_PERM);
+    mkdir("/root", DEFAULT_DIR_PERM);
+    mkdir("/var", DEFAULT_DIR_PERM);
+    symlink("/tmp", "/var/tmp");
 }
 /*********************************************************************************************************
 ** 函数名称: halBootThread
@@ -764,7 +722,7 @@ INT bspInit (VOID)
      *  这里使用 bsp 设置启动参数, 如果 bootloader 支持, 可使用 bootloader 设置.
      *  为了兼容以前的项目, 这里 kfpu=yes 允许内核中(包括中断)使用 FPU.
      */
-    API_KernelStartParam("ncpus=1 kdlog=yes kderror=yes kfpu=no heapchk=yes hz=100 "
+    API_KernelStartParam("ncpus=1 kdlog=no kderror=yes kfpu=no heapchk=yes hz=100 "
                          "varea=0xc0000000 vsize=0x3fffe000");
                                                                         /*  操作系统启动参数设置        */
     API_KernelStart(usrStartup,

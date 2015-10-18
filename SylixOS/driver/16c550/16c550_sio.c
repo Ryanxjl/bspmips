@@ -116,7 +116,7 @@ SIO_CHAN  *sioChan16C550Create (UINT  uiChannel)
         API_InterVectorConnect(pSio16C550Cfg->CFG_ulVector,
                                (PINT_SVR_ROUTINE)__sio16C550Isr,
                                (PVOID)pSio16C550Chan,
-                               "sio16C550_isr");                        /*  安装操作系统中断向量表      */
+                               "16c550_isr");                           /*  安装操作系统中断向量表      */
 
         API_InterVectorEnable(pSio16C550Cfg->CFG_ulVector);
 

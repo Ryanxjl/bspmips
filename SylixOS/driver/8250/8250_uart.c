@@ -16,7 +16,7 @@
 **
 ** 文件创建日期: 2015 年 08 月 14 日
 **
-** 描        述: 8250 UART 驱动
+** 描        述: INTEL 8250 UART 驱动
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "SylixOS.h"
@@ -35,10 +35,6 @@
 #define UART_LCR_VALUE1  	(UART_LCR_DLAB | UART_LCR_DLS)
 #define UART_LSR_THRE    	(1 << 5)
 #define UART_LSR_DR      	(1)       									/*  data ready 					*/
-
-#define UART0_BASE  0xb40003f8               /* UART0 基地址 */
-#define UART0_CLK   115200                   /* UART0 波特率 */
-
 /*********************************************************************************************************
 ** 函数名称: uart8250PutStr
 ** 功能描述: 8250 UART 输出字符串
@@ -111,17 +107,6 @@ CHAR  uart8250GetChar (addr_t  addrBase)
 
 	return  (read8(addrBase + UART_RBR));
 }
-
-VOID  bspDebugPutc (CHAR  cChar)
-{
-    uart8250PutChar(UART0_BASE, cChar);
-}
-
-CHAR  bspDebugGetc (VOID)
-{
-    return  (uart8250GetChar(UART0_BASE));
-}
-
 /*********************************************************************************************************
   END
 *********************************************************************************************************/

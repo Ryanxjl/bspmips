@@ -56,6 +56,43 @@ LW_VMM_ZONE_DESC    _G_zonedescGlobal[] = {
 *********************************************************************************************************/
 
 LW_MMU_GLOBAL_DESC  _G_globaldescMap[] = {
+#ifdef __BOOT_INRAM
+    {
+            BSP_CFG_RAM_BASE,
+            BSP_CFG_RAM_PA_BASE,
+            BSP_CFG_KERNEL_SIZE,                                        /*  SylixOS Kernel Text         */
+            (LW_VMM_FLAG_EXEC | LW_VMM_FLAG_RDWR)                       /*  此段可修改, 方便调试        */
+    },
+#else
+    {
+            BSP_CFG_ROM_BASE,
+            BSP_CFG_ROM_PA_BASE,
+            BSP_CFG_KERNEL_SIZE,                                        /*  SylixOS Kernel Text         */
+            LW_VMM_FLAG_EXEC
+    },
+#endif
+
+    {
+            BSP_CFG_DATA_BASE,
+            BSP_CFG_DATA_PA_BASE,
+            BSP_CFG_COMMON_MEM_SIZE,
+            LW_VMM_FLAG_RDWR
+    },
+
+    {
+            BSP_CFG_ISA_IO_BASE,
+            BSP_CFG_ISA_IO_PA_BASE,
+            BSP_CFG_ISA_IO_SIZE,
+            LW_VMM_FLAG_DMA
+    },
+
+    {
+            BSP_CFG_ISA_MEM_BASE,
+            BSP_CFG_ISA_MEM_PA_BASE,
+            BSP_CFG_ISA_MEM_SIZE,
+            LW_VMM_FLAG_DMA
+    },
+
     {
             0,
             0,

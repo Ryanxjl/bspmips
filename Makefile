@@ -81,10 +81,10 @@ SylixOS/bsp/bspLib.c
 # drivers src(s) file
 #*********************************************************************************************************
 DRV_SRCS = \
-SylixOS/driver/tty/8250_uart.c \
-SylixOS/driver/sio_poll/sio.c \
-SylixOS/driver/sio/16c550_sio.c \
-SylixOS/driver/sio/mipssim_16c550_sio.c
+SylixOS/driver/8250/8250_uart.c \
+SylixOS/driver/16c550/16c550_sio.c \
+SylixOS/driver/16c550/r4k_16c550_sio.c \
+SylixOS/driver/8259A/8259a_pic.c
 
 #*********************************************************************************************************
 # user src(s) file

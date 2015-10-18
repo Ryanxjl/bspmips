@@ -22,9 +22,9 @@
 #include "config.h"
 #include "SylixOS.h"
 
-#include "driver/tty/8250_uart.h"
-#include "driver/sio_poll/sio.h"
 #include "arch/mips/common/cp0/mipsCp0.h"
+#include "driver/8250/8250_uart.h"
+#include "driver/8259A/8259a_pic.h"
 /*********************************************************************************************************
   BSP 信息
 *********************************************************************************************************/
@@ -35,7 +35,25 @@ static const CHAR   _G_pcVersionInfo[] = "BSP version 0.2.0 for GEMINI";
 /*********************************************************************************************************
   中断系统相关函数
 *********************************************************************************************************/
-#define BSP_INT_NUMS                8
+#define MIPS_INTER_INT_NR               8                               /*  内部中断数目                */
+/*********************************************************************************************************
+** 函数名称: __sio16C550Isr
+** 功能描述: 获得 16C550 寄存器的值
+** 输　入  : pSio16C550Chan        16C550 SIO 通道
+**           ulVector              中断向量号
+** 输　出  : 中断返回值
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static irqreturn_t  __bsp8259aIsr (PVOID  pvArg, ULONG  ulVector)
+{
+    INT  iIrq = pic8259AIrq();
+
+    if (iIrq >= 0) {
+        archIntHandle((ULONG)iIrq, LW_FALSE);
+    }
+    return  (LW_IRQ_HANDLED);
+}
 /*********************************************************************************************************
 ** 函数名称: bspIntInit
 ** 功能描述: 中断系统初始化
@@ -55,6 +73,14 @@ VOID  bspIntInit (VOID)
      * API_InterVectorSetFlag(LW_IRQ_0, LW_IRQ_FLAG_SAMPLE_RAND);
      * 的代码.
      */
+    pic8259AInit(1);
+
+    API_InterVectorConnect(BSP_CFG_8259A_VECTOR,
+                           (PINT_SVR_ROUTINE)__bsp8259aIsr,
+                           (PVOID)LW_NULL,
+                           "8259a_isr");                                /*  安装操作系统中断向量表      */
+
+    API_InterVectorEnable(BSP_CFG_8259A_VECTOR);
 }
 /*********************************************************************************************************
 ** 函数名称: bspIntHandle
@@ -78,7 +104,7 @@ VOID  bspIntHandle (VOID)
 
     uiCause &= uiCP0Status;
 
-    for (uiVector = 0; uiVector < BSP_INT_NUMS; uiVector++) {
+    for (uiVector = 0; uiVector < MIPS_INTER_INT_NR; uiVector++) {
         if (uiCause & (1 << uiVector)) {
             archIntHandle((ULONG)uiVector, LW_FALSE);
         }
@@ -94,12 +120,14 @@ VOID  bspIntHandle (VOID)
 *********************************************************************************************************/
 VOID  bspIntVectorEnable (ULONG  ulVector)
 {
-    if (ulVector < BSP_INT_NUMS) {
+    if (ulVector < MIPS_INTER_INT_NR) {
         REGISTER UINT32  uiCP0Status = mipsCp0StatusRead();
 
         uiCP0Status |= 1 << (ulVector + S_StatusIM);
 
         mipsCp0StatusWrite(uiCP0Status);
+    } else {
+        pic8259AEnableIrq(ulVector);
     }
 }
 /*********************************************************************************************************
@@ -112,12 +140,14 @@ VOID  bspIntVectorEnable (ULONG  ulVector)
 *********************************************************************************************************/
 VOID  bspIntVectorDisable (ULONG  ulVector)
 {
-    if (ulVector < BSP_INT_NUMS) {
+    if (ulVector < MIPS_INTER_INT_NR) {
         REGISTER UINT32  uiCP0Status = mipsCp0StatusRead();
 
         uiCP0Status &= ~(1 << (ulVector + S_StatusIM));
 
         mipsCp0StatusWrite(uiCP0Status);
+    } else {
+        pic8259ADisableIrq(ulVector);
     }
 }
 /*********************************************************************************************************
@@ -130,7 +160,7 @@ VOID  bspIntVectorDisable (ULONG  ulVector)
 *********************************************************************************************************/
 BOOL  bspIntVectorIsEnable (ULONG  ulVector)
 {
-    if (ulVector < BSP_INT_NUMS) {
+    if (ulVector < MIPS_INTER_INT_NR) {
         REGISTER UINT32  uiCP0Status = mipsCp0StatusRead();
 
         uiCP0Status  &= M_StatusIM;
@@ -393,7 +423,31 @@ VOID  bspReboot (INT  iRebootType, addr_t  ulStartAddress)
 *********************************************************************************************************/
 VOID  bspDebugMsg (CPCHAR  pcMsg)
 {
-    uart8250PutStr((addr_t)0xb40003f8, pcMsg);
+    uart8250PutStr(BSP_CFG_16C550_BASE, pcMsg);
+}
+/*********************************************************************************************************
+** 函数名称: bspDebugMsg
+** 功能描述: 打印系统调试信息
+** 输　入  : pcMsg     信息
+** 输　出  : NONE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+VOID  bspDebugPutc (CHAR  cChar)
+{
+    uart8250PutChar(BSP_CFG_16C550_BASE, cChar);
+}
+/*********************************************************************************************************
+** 函数名称: bspDebugMsg
+** 功能描述: 打印系统调试信息
+** 输　入  : pcMsg     信息
+** 输　出  : NONE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+CHAR  bspDebugGetc (VOID)
+{
+    return  (uart8250GetChar(BSP_CFG_16C550_BASE));
 }
 /*********************************************************************************************************
   MMU 相关接口
@@ -564,11 +618,7 @@ static VOID  __tickThread (VOID)
 static irqreturn_t  __tickTimerIsr (VOID)
 {
     UINT32  uiCompare = mipsCp0CompareRead() + BSP_TMR_RELOAD;
-    UINT32  uiCount   = mipsCp0CountRead();
 
-    if (uiCompare < uiCount) {
-        uiCompare = uiCount;
-    }
     mipsCp0CompareWrite(uiCompare);                                     /*  清除 tick 定时器中断        */
 
     API_KernelTicksContext();                                           /*  保存被时钟中断的线程控制块  */
