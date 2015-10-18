@@ -35,6 +35,8 @@
 *********************************************************************************************************/
 #include "driver/8250/8250_uart.h"                                      /*  调试端口                    */
 #include "driver/16c550/16c550_sio.h"
+#include "driver/mc146818/mc146818_rtc.h"
+#include "driver/vga/vga_fb.h"
 /*********************************************************************************************************
   操作系统符号表
 *********************************************************************************************************/
@@ -79,16 +81,11 @@ static VOID  halModeInit (VOID)
 
 static VOID  halTimeInit (VOID)
 {
-    /*
-     * TODO: 加入你的处理代码, 参考代码如下:
-     */
-#if 0                                                                   /*  参考代码开始                */
-    PLW_RTC_FUNCS   prtcfuncs = rtcGetFuncs();
+    PLW_RTC_FUNCS   prtcfuncs = mc146818RtcGetFuncs();
 
     rtcDrv();
     rtcDevCreate(prtcfuncs);                                            /*  创建硬件 RTC 设备           */
     rtcToSys();                                                         /*  将 RTC 时间同步到系统时间   */
-#endif                                                                  /*  参考代码结束                */
 }
 
 #endif                                                                  /*  LW_CFG_RTC_EN > 0           */
@@ -256,10 +253,12 @@ static VOID  halDevInit (VOID)
     shmDevCreate();                                                     /*  创建共享内存设备            */
     randDevCreate();                                                    /*  创建随机数文件              */
 
-    SIO_CHAN    *psio0 = sioChan16C550Create(0);                          /*  创建串口 0 通道             */
+    SIO_CHAN    *psio0 = sioChan16C550Create(0);                        /*  创建串口 0 通道             */
     ttyDevCreate("/dev/ttyS0", psio0, 30, 50);                          /*  add    tty   device         */
 
     yaffsDevCreate("/yaffs2");                                          /*  create yaffs device(only fs)*/
+
+    vgaFbDevCreate("/dev/fb0");                                         /*  创建 framebuffer device     */
 }
 
 #endif                                                                  /*  LW_CFG_DEVICE_EN > 0        */

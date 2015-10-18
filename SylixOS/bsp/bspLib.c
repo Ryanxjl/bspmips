@@ -28,7 +28,7 @@
 /*********************************************************************************************************
   BSP 信息
 *********************************************************************************************************/
-static const CHAR   _G_pcCpuInfo[]     = "MIPS 24KF(500MHz NonFPU)";
+static const CHAR   _G_pcCpuInfo[]     = "MIPS 24KF(132MHz NonFPU)";
 static const CHAR   _G_pcCacheInfo[]   = "32KBytes L1-Cache(D-16K/I-16K)";
 static const CHAR   _G_pcPacketInfo[]  = "QEMU MIPS r4k platform";
 static const CHAR   _G_pcVersionInfo[] = "BSP version 0.2.0 for GEMINI";
@@ -585,7 +585,7 @@ VOID    bspCpuPowerGet (UINT  *puiPowerLevel)
 static LW_HANDLE    htKernelTicks;                                      /*  操作系统时钟服务线程句柄    */
 #endif                                                                  /*  TICK_IN_THREAD > 0          */
 
-#define BSP_TMR_RELOAD      (500 * 1000 * 1000 / (2 * LW_TICK_HZ))
+#define BSP_TMR_RELOAD      (132 * 1000 * 1000 / (2 * LW_TICK_HZ))
 
 /*********************************************************************************************************
 ** 函数名称: __tickThread

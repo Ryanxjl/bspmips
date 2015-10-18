@@ -32,24 +32,14 @@
 #include "config.h"
 #include "SylixOS.h"
 
-/*
- * This file is subject to the terms and conditions of the GNU General Public
- * License.  See the file "COPYING" in the main directory of this archive
- * for more details.
- *
- * Code to handle x86 style IRQs plus some generic interrupt stuff.
- *
- * Copyright (C) 1992 Linus Torvalds
- * Copyright (C) 1994 - 2000 Ralf Baechle
- */
 /* i8259A PIC registers */
-#define PIC_MASTER_CMD      (BSP_CFG_8259A_BASE + 0x20)
-#define PIC_MASTER_IMR      (BSP_CFG_8259A_BASE + 0x21)
+#define PIC_MASTER_CMD      (BSP_CFG_ISA_IO_BASE + 0x20)
+#define PIC_MASTER_IMR      (BSP_CFG_ISA_IO_BASE + 0x21)
 #define PIC_MASTER_ISR      PIC_MASTER_CMD
 #define PIC_MASTER_POLL     PIC_MASTER_ISR
 #define PIC_MASTER_OCW3     PIC_MASTER_ISR
-#define PIC_SLAVE_CMD       (BSP_CFG_8259A_BASE + 0xa0)
-#define PIC_SLAVE_IMR       (BSP_CFG_8259A_BASE + 0xa1)
+#define PIC_SLAVE_CMD       (BSP_CFG_ISA_IO_BASE + 0xa0)
+#define PIC_SLAVE_IMR       (BSP_CFG_ISA_IO_BASE + 0xa1)
 
 /* i8259A PIC related value */
 #define PIC_CASCADE_IR      2
