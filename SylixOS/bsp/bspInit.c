@@ -37,6 +37,7 @@
 #include "driver/16c550/16c550_sio.h"
 #include "driver/mc146818/mc146818_rtc.h"
 #include "driver/vga/vga_fb.h"
+#include "driver/ide/ide.h"
 /*********************************************************************************************************
   操作系统符号表
 *********************************************************************************************************/
@@ -150,14 +151,6 @@ static VOID  halFpuInit (VOID)
 
 static VOID  halPmInit (VOID)
 {
-    /*
-     * TODO: 加入你的处理代码, 参考代码如下:
-     */
-#if 0                                                                   /*  参考代码开始                */
-    PLW_PMA_FUNCS  pmafuncs = pmGetFuncs();
-
-    pmAdapterCreate("inner_pm", 21, pmafuncs);
-#endif                                                                  /*  参考代码结束                */
 }
 
 #endif                                                                  /*  LW_CFG_POWERM_EN > 0        */
@@ -173,16 +166,6 @@ static VOID  halPmInit (VOID)
 
 static VOID  halBusInit (VOID)
 {
-    /*
-     * TODO: 加入你的处理代码, 参考代码如下:
-     */
-#if 0                                                                   /*  参考代码开始                */
-    PLW_I2C_FUNCS    pi2cfuns  = i2cBusFuns();
-
-    API_I2cLibInit();                                                   /*  初始化 i2c 子系统           */
-
-    API_I2cAdapterCreate("/bus/i2c/0", pi2cfuns, 10, 1);                /*  创建 i2c 总线适配器         */
-#endif                                                                  /*  参考代码结束                */
 }
 
 #endif                                                                  /*  LW_CFG_DEVICE_EN > 0        */
@@ -216,20 +199,6 @@ static VOID  halDrvInit (VOID)
     nfsDrv();                                                           /*  nfs    device driver        */
     yaffsDrv();                                                         /*  yaffs  device driver        */
     canDrv();                                                           /*  CAN    device driver        */
-
-    /*
-     * TODO: 加入你的处理代码, 参考代码如下:
-     */
-#if 0                                                                   /*  参考代码开始                */
-    INT              i;
-    ULONG            ulMaxBytes;
-    PLW_DMA_FUNCS    pdmafuncs;
-
-    for (i = 0; i < 4; i++) {                                           /*  安装 2440 4 个通用 DMA 通道 */
-        pdmafuncs = dmaGetFuncs(LW_DMA_CHANNEL0 + i, &ulMaxBytes);
-        dmaDrv((UINT)i, pdmafuncs, (size_t)ulMaxBytes);                 /*  安装 DMA 控制器驱动         */
-    }
-#endif                                                                  /*  参考代码结束                */
 }
 
 #endif                                                                  /*  LW_CFG_DEVICE_EN > 0        */
@@ -256,9 +225,9 @@ static VOID  halDevInit (VOID)
     SIO_CHAN    *psio0 = sioChan16C550Create(0);                        /*  创建串口 0 通道             */
     ttyDevCreate("/dev/ttyS0", psio0, 30, 50);                          /*  add    tty   device         */
 
-    yaffsDevCreate("/yaffs2");                                          /*  create yaffs device(only fs)*/
-
     vgaFbDevCreate("/dev/fb0");                                         /*  创建 framebuffer device     */
+
+    idaInit();                                                          /*  初始化 IDE 硬盘             */
 }
 
 #endif                                                                  /*  LW_CFG_DEVICE_EN > 0        */
@@ -537,22 +506,62 @@ static VOID  halStdDirInit (VOID)
      *  其余挂载点需要通过手动创建, 例如: /etc /bin /sbin /tmp 等等,
      *  一般来说 /tmp /bin /sbin /ftk /etc ... 可以做成链接文件, 链接到指定的文件系统.
      */
-    API_Mount("0", "/etc", "ramfs");
-    API_Mount("0", "/tmp", "ramfs");
-
     mkdir("/usb", DEFAULT_DIR_PERM);
-    mkdir("/boot", DEFAULT_DIR_PERM);
-    mkdir("/ftk", DEFAULT_DIR_PERM);                                    /*  创建 FTK 图形系统符号链接   */
-    mkdir("/qt", DEFAULT_DIR_PERM);                                     /*  创建 Qt 图形系统符号链接    */
-    mkdir("/lib", DEFAULT_DIR_PERM);
-    mkdir("/usr", DEFAULT_DIR_PERM);
-    mkdir("/bin", DEFAULT_DIR_PERM);
-    mkdir("/sbin", DEFAULT_DIR_PERM);
-    mkdir("/apps", DEFAULT_DIR_PERM);
-    mkdir("/home", DEFAULT_DIR_PERM);
-    mkdir("/root", DEFAULT_DIR_PERM);
-    mkdir("/var", DEFAULT_DIR_PERM);
-    symlink("/tmp", "/var/tmp");
+
+    if (access("/media/hd0/boot", R_OK) < 0) {
+        mkdir("/media/hd0/boot", DEFAULT_DIR_PERM);
+    }
+    if (access("/media/hd0/etc", R_OK) < 0) {
+        mkdir("/media/hd0/etc", DEFAULT_DIR_PERM);
+    }
+    if (access("/media/hd0/ftk", R_OK) < 0) {
+        mkdir("/media/hd0/ftk", DEFAULT_DIR_PERM);
+    }
+    if (access("/media/hd0/qt", R_OK) < 0) {
+        mkdir("/media/hd0/qt", DEFAULT_DIR_PERM);
+    }
+    if (access("/media/hd0/lib", R_OK) < 0) {
+        mkdir("/media/hd0/lib", DEFAULT_DIR_PERM);
+        mkdir("/media/hd0/lib/modules", DEFAULT_DIR_PERM);
+    }
+    if (access("/media/hd0/usr", R_OK) < 0) {
+        mkdir("/media/hd0/usr", DEFAULT_DIR_PERM);
+        mkdir("/media/hd0/usr/lib", DEFAULT_DIR_PERM);
+    }
+    if (access("/media/hd0/bin", R_OK) < 0) {
+        mkdir("/media/hd0/bin", DEFAULT_DIR_PERM);
+    }
+    if (access("/media/hd0/sbin", R_OK) < 0) {
+        mkdir("/media/hd0/sbin", DEFAULT_DIR_PERM);
+    }
+    if (access("/media/hd0/apps", R_OK) < 0) {
+        mkdir("/media/hd0/apps", DEFAULT_DIR_PERM);
+    }
+    if (access("/media/hd0/home", R_OK) < 0) {
+        mkdir("/media/hd0/home", DEFAULT_DIR_PERM);
+    }
+    if (access("/media/hd0/root", R_OK) < 0) {
+        mkdir("/media/hd0/root", DEFAULT_DIR_PERM);
+    }
+    if (access("/media/hd0/var", R_OK) < 0) {
+        mkdir("/media/hd0/var", DEFAULT_DIR_PERM);
+    }
+
+    symlink("/media/hd0/boot", "/boot");
+    symlink("/media/hd0/etc",  "/etc");                                 /*  创建根目录符号链接          */
+    symlink("/media/hd0/ftk",  "/ftk");                                 /*  创建 FTK 图形系统符号链接   */
+    symlink("/media/hd0/qt",   "/qt");                                  /*  创建 Qt 图形系统符号链接    */
+    symlink("/media/hd0/lib",  "/lib");
+    symlink("/media/hd0/usr",  "/usr");
+    symlink("/media/hd0/bin",  "/bin");
+    symlink("/media/hd0/sbin", "/sbin");
+    symlink("/media/hd0/apps", "/apps");
+    symlink("/media/hd0/home", "/home");
+    symlink("/media/hd0/root", "/root");
+    symlink("/media/hd0/var",  "/var");
+    system("mount -t ramfs 0 /tmp");
+
+    system("mount -t ramfs 0 /ramdisk");
 }
 /*********************************************************************************************************
 ** 函数名称: halBootThread
@@ -587,23 +596,6 @@ static PVOID  halBootThread (PVOID  pvBootArg)
     halLogInit();
     console_loglevel = default_message_loglevel;                        /*  设置 printk 打印信息等级    */
 #endif                                                                  /*  LW_CFG_LOG_LIB_EN > 0       */
-
-    /*
-     *  以为 yaffs 挂载物理卷时, 需要 stdout 打印信息, 如果在 halDevInit() 中被调用, 由于没有创建
-     *  标准文件, 所以会打印警告错误信息, 所以将此函数放在这里!
-     *  如果未初始化标准文件会提示错误信息
-     */
-    /*
-     * TODO: 加入你的处理代码, 参考代码如下:
-     */
-#if 0                                                                   /*  参考代码开始                */
-#ifdef __GNUC__
-    nand_init();
-    mtdDevCreateEx("/n");                                               /*  mount mtddevice             */
-#else
-    nandDevCreateEx("/n");                                              /*  mount nandflash disk(yaffs) */
-#endif
-#endif                                                                  /*  参考代码结束                */
 
     halStdDirInit();                                                    /*  创建标准目录                */
 

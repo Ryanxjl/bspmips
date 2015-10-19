@@ -278,7 +278,8 @@ static INT      __vgaGetPalette (PLW_GM_DEVICE  pGmDev,
 *********************************************************************************************************/
 INT  vgaFbDevCreate (CPCHAR  cpcName)
 {
-    __PVGA_CONTROLER    pControler = &_G_vgaControler;
+    __PVGA_CONTROLER        pControler  = &_G_vgaControler;
+    PLW_GM_FILEOPERATIONS   pGmFileOper = &_G_vgaGmFileOper;
 
     if (cpcName == LW_NULL) {
         return  (PX_ERROR);
@@ -287,16 +288,16 @@ INT  vgaFbDevCreate (CPCHAR  cpcName)
     /*
      *  仅支持 framebuffer 模式.
      */
-    _G_vgaGmFileOper.GMFO_pfuncOpen         = __vgaOpen;
-    _G_vgaGmFileOper.GMFO_pfuncClose        = __vgaClose;
-    _G_vgaGmFileOper.GMFO_pfuncGetVarInfo   = (INT (*)(LONG, PLW_GM_VARINFO))__vgaGetVarInfo;
-    _G_vgaGmFileOper.GMFO_pfuncGetScrInfo   = (INT (*)(LONG, PLW_GM_SCRINFO))__vgaGetScrInfo;
-    _G_vgaGmFileOper.GMFO_pfuncSetPalette   = (INT (*)(LONG, UINT, UINT, ULONG *, ULONG *, ULONG *))
-                                              __vgaSetPalette;
-    _G_vgaGmFileOper.GMFO_pfuncGetPalette   = (INT (*)(LONG, UINT, UINT, ULONG *, ULONG *, ULONG *))
-                                              __vgaGetPalette;
+    pGmFileOper->GMFO_pfuncOpen         = __vgaOpen;
+    pGmFileOper->GMFO_pfuncClose        = __vgaClose;
+    pGmFileOper->GMFO_pfuncGetVarInfo   = (INT (*)(LONG, PLW_GM_VARINFO))__vgaGetVarInfo;
+    pGmFileOper->GMFO_pfuncGetScrInfo   = (INT (*)(LONG, PLW_GM_SCRINFO))__vgaGetScrInfo;
+    pGmFileOper->GMFO_pfuncSetPalette   = (INT (*)(LONG, UINT, UINT, ULONG *, ULONG *, ULONG *))
+                                          __vgaSetPalette;
+    pGmFileOper->GMFO_pfuncGetPalette   = (INT (*)(LONG, UINT, UINT, ULONG *, ULONG *, ULONG *))
+                                          __vgaGetPalette;
 
-    pControler->VGAC_gmDev.GMDEV_gmfileop   = &_G_vgaGmFileOper;
+    pControler->VGAC_gmDev.GMDEV_gmfileop   = pGmFileOper;
     pControler->VGAC_gmDev.GMDEV_ulMapFlags = LW_VMM_FLAG_DMA | LW_VMM_FLAG_BUFFERABLE;
     pControler->VGAC_pcName                 = cpcName;
 

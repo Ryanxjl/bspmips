@@ -25,6 +25,7 @@
 #include "arch/mips/common/cp0/mipsCp0.h"
 #include "driver/8250/8250_uart.h"
 #include "driver/8259A/8259a_pic.h"
+#include "driver/8254/8254_timer.h"
 /*********************************************************************************************************
   BSP 信息
 *********************************************************************************************************/
@@ -36,24 +37,6 @@ static const CHAR   _G_pcVersionInfo[] = "BSP version 0.2.0 for GEMINI";
   中断系统相关函数
 *********************************************************************************************************/
 #define MIPS_INTER_INT_NR               8                               /*  内部中断数目                */
-/*********************************************************************************************************
-** 函数名称: __sio16C550Isr
-** 功能描述: 获得 16C550 寄存器的值
-** 输　入  : pSio16C550Chan        16C550 SIO 通道
-**           ulVector              中断向量号
-** 输　出  : 中断返回值
-** 全局变量:
-** 调用模块:
-*********************************************************************************************************/
-static irqreturn_t  __bsp8259aIsr (PVOID  pvArg, ULONG  ulVector)
-{
-    INT  iIrq = pic8259AIrq();
-
-    if (iIrq >= 0) {
-        archIntHandle((ULONG)iIrq, LW_FALSE);
-    }
-    return  (LW_IRQ_HANDLED);
-}
 /*********************************************************************************************************
 ** 函数名称: bspIntInit
 ** 功能描述: 中断系统初始化
@@ -74,11 +57,6 @@ VOID  bspIntInit (VOID)
      * 的代码.
      */
     pic8259AInit(1);
-
-    API_InterVectorConnect(BSP_CFG_8259A_VECTOR,
-                           (PINT_SVR_ROUTINE)__bsp8259aIsr,
-                           (PVOID)LW_NULL,
-                           "8259a_isr");                                /*  安装操作系统中断向量表      */
 
     API_InterVectorEnable(BSP_CFG_8259A_VECTOR);
 }
@@ -106,7 +84,14 @@ VOID  bspIntHandle (VOID)
 
     for (uiVector = 0; uiVector < MIPS_INTER_INT_NR; uiVector++) {
         if (uiCause & (1 << uiVector)) {
-            archIntHandle((ULONG)uiVector, LW_FALSE);
+            if (uiVector == BSP_CFG_8259A_VECTOR) {
+                INT  iSubVector = pic8259AIrq();
+                if (iSubVector >= 0) {
+                    archIntHandle((ULONG)iSubVector, LW_FALSE);
+                }
+            } else {
+                archIntHandle((ULONG)uiVector, LW_FALSE);
+            }
         }
     }
 }
@@ -584,9 +569,6 @@ VOID    bspCpuPowerGet (UINT  *puiPowerLevel)
 #if TICK_IN_THREAD > 0
 static LW_HANDLE    htKernelTicks;                                      /*  操作系统时钟服务线程句柄    */
 #endif                                                                  /*  TICK_IN_THREAD > 0          */
-
-#define BSP_TMR_RELOAD      (132 * 1000 * 1000 / (2 * LW_TICK_HZ))
-
 /*********************************************************************************************************
 ** 函数名称: __tickThread
 ** 功能描述: 初始化 tick 服务线程
@@ -617,10 +599,6 @@ static VOID  __tickThread (VOID)
 *********************************************************************************************************/
 static irqreturn_t  __tickTimerIsr (VOID)
 {
-    UINT32  uiCompare = mipsCp0CompareRead() + BSP_TMR_RELOAD;
-
-    mipsCp0CompareWrite(uiCompare);                                     /*  清除 tick 定时器中断        */
-
     API_KernelTicksContext();                                           /*  保存被时钟中断的线程控制块  */
 
 #if TICK_IN_THREAD > 0
@@ -645,7 +623,7 @@ VOID  bspTickInit (VOID)
 #if TICK_IN_THREAD > 0
     LW_CLASS_THREADATTR threakattr;
 #endif
-    ULONG                ulVector = 0;
+    ULONG                ulVector = BSP_CFG_8254_VECTOR;
 
 #if TICK_IN_THREAD > 0
     API_ThreadAttrBuild(&threakattr, (8 * LW_CFG_KB_SIZE),
@@ -659,12 +637,7 @@ VOID  bspTickInit (VOID)
                                      &threakattr, LW_NULL);
 #endif                                                                  /*  TICK_IN_THREAD > 0          */
 
-    UINT32  uiIntCtl = mipsCp0IntCtlRead();
-
-    ulVector = ((uiIntCtl & M_IntCtlIPPI) >> S_IntCtlIPPI);
-
-    mipsCp0CountWrite(0);
-    mipsCp0CompareWrite(BSP_TMR_RELOAD);
+    timer8254Init();
 
     API_InterVectorConnect(ulVector,
                            (PINT_SVR_ROUTINE)__tickTimerIsr,

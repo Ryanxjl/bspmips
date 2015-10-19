@@ -86,7 +86,9 @@ SylixOS/driver/16c550/16c550_sio.c \
 SylixOS/driver/16c550/r4k_16c550_sio.c \
 SylixOS/driver/8259A/8259a_pic.c \
 SylixOS/driver/mc146818/mc146818_rtc.c \
-SylixOS/driver/vga/vga_fb.c
+SylixOS/driver/vga/vga_fb.c \
+SylixOS/driver/ide/ide.c \
+SylixOS/driver/8254/8254_timer.c \
 
 #*********************************************************************************************************
 # user src(s) file
