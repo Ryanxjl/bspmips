@@ -670,9 +670,9 @@ static VOID  usrStartup (VOID)
     halVmmInit();
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */
 
-//#if LW_CFG_CACHE_EN > 0
-//    halCacheInit();
-//#endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
+#if LW_CFG_CACHE_EN > 0
+    halCacheInit();
+#endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
 
     API_ThreadAttrBuild(&threakattr,
                         __LW_THREAD_BOOT_STK_SIZE,
