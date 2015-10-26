@@ -88,6 +88,8 @@ VOID  bspIntHandle (VOID)
                 INT  iSubVector = pic8259AIrq();
                 if (iSubVector >= 0) {
                     archIntHandle((ULONG)iSubVector, LW_FALSE);
+                } else {
+                    while (1);
                 }
             } else {
                 archIntHandle((ULONG)uiVector, LW_FALSE);
@@ -153,7 +155,7 @@ BOOL  bspIntVectorIsEnable (ULONG  ulVector)
 
         return  ((uiCP0Status & (1 << ulVector)) ? LW_TRUE : LW_FALSE);
     } else {
-        return  (LW_TRUE);
+        return  (pic8259AIsEnableIrq(ulVector) ? LW_TRUE : LW_FALSE);
     }
 }
 /*********************************************************************************************************

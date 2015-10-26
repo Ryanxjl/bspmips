@@ -38,6 +38,7 @@
 #include "driver/mc146818/mc146818_rtc.h"
 #include "driver/vga/vga_fb.h"
 #include "driver/ide/ide.h"
+#include "driver/ne2000/ne2000.h"
 /*********************************************************************************************************
   操作系统符号表
 *********************************************************************************************************/
@@ -371,6 +372,12 @@ static VOID  halNetInit (VOID)
     API_INetVpnInit();
 #endif                                                                  /*  LW_CFG_NET_VPN_EN > 0       */
 }
+
+static NE2000_DATA  _G_ne2000Data = {
+        .uiBaseAddr = BSP_CFG_NE2000_BASE,
+        .irq        = BSP_CFG_NE2000_VECTOR,
+        .ucMacAddr  = { 0x08, 0x08, 0x3E, 0x26, 0x0A, 0x5A},
+};
 /*********************************************************************************************************
 ** 函数名称: halNetifAttch
 ** 功能描述: 网络接口连接
@@ -381,10 +388,6 @@ static VOID  halNetInit (VOID)
 *********************************************************************************************************/
 static VOID  halNetifAttch (VOID)
 {
-    /*
-     * TODO: 加入你的处理代码, 参考代码如下:
-     */
-#if 0                                                                   /*  参考代码开始                */
     static struct netif  ethernetif;
     ip_addr_t            ip, submask, gateway;
 
@@ -393,10 +396,10 @@ static VOID  halNetifAttch (VOID)
     IP4_ADDR(&gateway,  192, 168,   7,   1);
 
     netif_add(&ethernetif, &ip, &submask, &gateway,
-              NULL, dm9000_netif_init,
+              &_G_ne2000Data, ne2000_netif_init,
               tcpip_input);
 
-    ethernetif.ip6_autoconfig_enabled = 1;                              /*  允许 IPv6 地址自动配置      */
+    ethernetif.ip6_autoconfig_enabled = 0;                              /*  允许 IPv6 地址自动配置      */
 
     netif_set_up(&ethernetif);
 
@@ -408,7 +411,7 @@ static VOID  halNetifAttch (VOID)
               (ethernetif.hwaddr[1] << 16) |
               (ethernetif.hwaddr[2] <<  8) |
               (ethernetif.hwaddr[3]));                                  /*  可以用 mac 设置随机数种子   */
-#endif                                                                  /*  参考代码结束                */
+
 }
 
 #endif                                                                  /*  LW_CFG_NET_EN > 0           */

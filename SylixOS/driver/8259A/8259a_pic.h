@@ -22,6 +22,7 @@
 #define _8259A_PIC_H_
 
 void disable_8259A_irq(unsigned int irq);
+unsigned char isenable_8259A_irq(unsigned int irq);
 void enable_8259A_irq(unsigned int irq);
 int i8259A_irq_pending(unsigned int irq);
 void mask_and_ack_8259A(unsigned int irq);
@@ -31,6 +32,7 @@ int i8259_irq(void);
 #define pic8259AInit                init_8259A
 #define pic8259ADisableIrq          disable_8259A_irq
 #define pic8259AEnableIrq           enable_8259A_irq
+#define pic8259AIsEnableIrq         isenable_8259A_irq
 #define pic8259AIrq                 i8259_irq
 
 #endif                                                                  /*  _8259A_PIC_H_               */

@@ -89,6 +89,7 @@ SylixOS/driver/mc146818/mc146818_rtc.c \
 SylixOS/driver/vga/vga_fb.c \
 SylixOS/driver/ide/ide.c \
 SylixOS/driver/8254/8254_timer.c \
+SylixOS/driver/ne2000/ne2000.c \
 
 #*********************************************************************************************************
 # user src(s) file

@@ -82,6 +82,20 @@ void disable_8259A_irq(unsigned int irq)
         write8(cached_master_mask, PIC_MASTER_IMR);
 }
 
+unsigned char isenable_8259A_irq(unsigned int irq)
+{
+    unsigned int mask;
+
+    irq -= BSP_CFG_8259A_VECTOR_BASE;
+
+    mask = 1 << irq;
+    if (cached_irq_mask & mask) {
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
 void enable_8259A_irq(unsigned int irq)
 {
     unsigned int mask;
