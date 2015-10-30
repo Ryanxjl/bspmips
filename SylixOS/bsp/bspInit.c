@@ -39,6 +39,7 @@
 #include "driver/vga/vga_fb.h"
 #include "driver/ide/ide.h"
 #include "driver/ne2000/ne2000.h"
+
 /*********************************************************************************************************
   操作系统符号表
 *********************************************************************************************************/
@@ -229,6 +230,7 @@ static VOID  halDevInit (VOID)
     vgaFbDevCreate("/dev/fb0");                                         /*  创建 framebuffer device     */
 
     idaInit();                                                          /*  初始化 IDE 硬盘             */
+
 }
 
 #endif                                                                  /*  LW_CFG_DEVICE_EN > 0        */
@@ -399,7 +401,7 @@ static VOID  halNetifAttch (VOID)
               &_G_ne2000Data, ne2000_netif_init,
               tcpip_input);
 
-    ethernetif.ip6_autoconfig_enabled = 0;                              /*  允许 IPv6 地址自动配置      */
+    ethernetif.ip6_autoconfig_enabled = 1;                              /*  允许 IPv6 地址自动配置      */
 
     netif_set_up(&ethernetif);
 
@@ -411,7 +413,6 @@ static VOID  halNetifAttch (VOID)
               (ethernetif.hwaddr[1] << 16) |
               (ethernetif.hwaddr[2] <<  8) |
               (ethernetif.hwaddr[3]));                                  /*  可以用 mac 设置随机数种子   */
-
 }
 
 #endif                                                                  /*  LW_CFG_NET_EN > 0           */

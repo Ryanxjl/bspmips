@@ -21,10 +21,11 @@
 #ifndef NE2000_H_
 #define NE2000_H_
 
+#define ETHER_ADDR_LEN 6
 typedef struct ne2000_data {
     addr_t            uiBaseAddr;
     int               irq;
-    u8_t              ucMacAddr[6];
+    u8_t              ucMacAddr[ETHER_ADDR_LEN];
 } NE2000_DATA;
 
 /*********************************************************************************************************

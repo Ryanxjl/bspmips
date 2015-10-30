@@ -24,8 +24,15 @@
 
 #include "arch/mips/common/cp0/mipsCp0.h"
 #include "driver/8250/8250_uart.h"
-#include "driver/8259A/8259a_pic.h"
-#include "driver/8254/8254_timer.h"
+#include "driver/int/i8259a.h"
+#include "driver/timer/i8254.h"
+
+static I8259A_CTL _8259adata = {
+        .iobase_master  = BSP_CFG_8259A_IO_BASE_MASTER,
+        .iobase_slave   = BSP_CFG_8259A_IO_BASE_SLAVE,
+        .trigger        = 0,
+    };
+
 /*********************************************************************************************************
   BSP 信息
 *********************************************************************************************************/
@@ -56,9 +63,11 @@ VOID  bspIntInit (VOID)
      * API_InterVectorSetFlag(LW_IRQ_0, LW_IRQ_FLAG_SAMPLE_RAND);
      * 的代码.
      */
-    pic8259AInit(1);
 
-    API_InterVectorEnable(BSP_CFG_8259A_VECTOR);
+    i8259aInit(&_8259adata);
+
+    API_InterVectorEnable(BSP_CFG_8259A1_VECTOR_BASE);
+    API_InterVectorEnable(BSP_CFG_8259A2_VECTOR_BASE);
 }
 /*********************************************************************************************************
 ** 函数名称: bspIntHandle
@@ -85,9 +94,9 @@ VOID  bspIntHandle (VOID)
     for (uiVector = 0; uiVector < MIPS_INTER_INT_NR; uiVector++) {
         if (uiCause & (1 << uiVector)) {
             if (uiVector == BSP_CFG_8259A_VECTOR) {
-                INT  iSubVector = pic8259AIrq();
+                INT  iSubVector = i8259aIrq(&_8259adata);
                 if (iSubVector >= 0) {
-                    archIntHandle((ULONG)iSubVector, LW_FALSE);
+                    archIntHandle((ULONG)iSubVector + BSP_CFG_8259A_VECTOR_OFFSET, LW_FALSE);
                 } else {
                     while (1);
                 }
@@ -114,7 +123,7 @@ VOID  bspIntVectorEnable (ULONG  ulVector)
 
         mipsCp0StatusWrite(uiCP0Status);
     } else {
-        pic8259AEnableIrq(ulVector);
+        i8259aIrqEnable(&_8259adata, ulVector - BSP_CFG_8259A_VECTOR_OFFSET);
     }
 }
 /*********************************************************************************************************
@@ -134,7 +143,7 @@ VOID  bspIntVectorDisable (ULONG  ulVector)
 
         mipsCp0StatusWrite(uiCP0Status);
     } else {
-        pic8259ADisableIrq(ulVector);
+        i8259aIrqDisable(&_8259adata, ulVector - BSP_CFG_8259A_VECTOR_OFFSET);
     }
 }
 /*********************************************************************************************************
@@ -155,7 +164,8 @@ BOOL  bspIntVectorIsEnable (ULONG  ulVector)
 
         return  ((uiCP0Status & (1 << ulVector)) ? LW_TRUE : LW_FALSE);
     } else {
-        return  (pic8259AIsEnableIrq(ulVector) ? LW_TRUE : LW_FALSE);
+        return  (i8259aIrqIsEnable(&_8259adata, ulVector - BSP_CFG_8259A_VECTOR_OFFSET) ?
+                LW_TRUE : LW_FALSE);
     }
 }
 /*********************************************************************************************************
@@ -639,7 +649,11 @@ VOID  bspTickInit (VOID)
                                      &threakattr, LW_NULL);
 #endif                                                                  /*  TICK_IN_THREAD > 0          */
 
-    timer8254Init();
+    I8254_CTL _8254data = {
+        .iobase     = BSP_CFG_8254_IO_BASE,
+    };
+
+    i8254InitAsTick(&_8254data);
 
     API_InterVectorConnect(ulVector,
                            (PINT_SVR_ROUTINE)__tickTimerIsr,
