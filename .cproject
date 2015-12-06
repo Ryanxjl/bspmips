@@ -26,7 +26,7 @@
 					<folderInfo id="com.sylixos.realcoder.toolChain.armsylixeabi.1566990372.1681416913" name="/" resourcePath="">
 						<toolChain id="com.sylixos.realcoder.toolChain.armsylixeabi.1861174359" name="arm-sylixos-toolchain" superClass="com.sylixos.realcoder.toolChain.armsylixeabi">
 							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.GNU_ELF" id="com.sylixos.realcoder.targetPlatform.armsylixoseabi.304705212" isAbstract="false" name="SylixOS TagetPlagform" osList="win32" superClass="com.sylixos.realcoder.targetPlatform.armsylixoseabi"/>
-							<builder id="com.sylixos.realcoder.builder.armsylixeabi.483876559" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="SylixOS Builder" superClass="com.sylixos.realcoder.builder.armsylixeabi"/>
+							<builder arguments="-j 8" command="make" id="com.sylixos.realcoder.builder.armsylixeabi.483876559" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="SylixOS Builder" superClass="com.sylixos.realcoder.builder.armsylixeabi"/>
 							<tool id="com.sylixos.realcoder.tool.armsylixeabi.282576671" name="arm-sylixos-eabi-gcc" superClass="com.sylixos.realcoder.tool.armsylixeabi">
 								<option id="com.sylixos.realcoder.option.armsylixoseabi.include.666019808" name="Include paths (-I)" superClass="com.sylixos.realcoder.option.armsylixoseabi.include" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${SYLIXOS_BASE_PATH}/libsylixos/SylixOS&quot;"/>
@@ -56,5 +56,9 @@
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
-	<storageModule moduleId="refreshScope"/>
+	<storageModule moduleId="refreshScope" versionNumber="2">
+		<configuration configurationName="Default">
+			<resource resourceType="PROJECT" workspacePath="/bspmips"/>
+		</configuration>
+	</storageModule>
 </cproject>

@@ -28,20 +28,11 @@ __check_defined = \
     $(if $(value $1),, \
       $(error Undefined $1$(if $(value 2), ($(strip $2)))))
 
-$(call check_defined, CONFIG_MK_EXIST, Please configure this project in RealCoder or \
+$(call check_defined, CONFIG_MK_EXIST, Please configure this project in RealEvo-IDE or \
 create a config.mk file!)
 $(call check_defined, SYLIXOS_BASE_PATH, SylixOS base project path)
 $(call check_defined, TOOLCHAIN_PREFIX, the prefix name of toolchain)
 $(call check_defined, DEBUG_LEVEL, debug level(debug or release))
-
-#*********************************************************************************************************
-# configure area you can set the following config to you own system
-# FPUFLAGS (-mfloat-abi=softfp -mfpu=vfpv3 ...)
-# CPUFLAGS (-mcpu=arm920t ...)
-# NOTICE: libsylixos, BSP and other kernel modules projects CAN NOT use vfp!
-#*********************************************************************************************************
-FPUFLAGS =
-CPUFLAGS = -march=24kf -EL -mabi=32 -Wa,-mips32r2  -G 0
 
 #*********************************************************************************************************
 # toolchain select
@@ -87,7 +78,6 @@ SylixOS/driver/16c550/r4k_16c550_sio.c \
 SylixOS/driver/mc146818/mc146818_rtc.c \
 SylixOS/driver/vga/vga_fb.c \
 SylixOS/driver/ide/ide.c \
-SylixOS/driver/ne2000/ne2000.c \
 
 #*********************************************************************************************************
 # user src(s) file

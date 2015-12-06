@@ -38,7 +38,6 @@
 #include "driver/mc146818/mc146818_rtc.h"
 #include "driver/vga/vga_fb.h"
 #include "driver/ide/ide.h"
-#include "driver/ne2000/ne2000.h"
 
 /*********************************************************************************************************
   操作系统符号表
@@ -137,7 +136,7 @@ static VOID  halCacheInit (VOID)
 
 static VOID  halFpuInit (VOID)
 {
-    API_KernelFpuInit(MIPS_MACHINE_24KF, ARM_FPU_NONE);
+    API_KernelFpuInit(MIPS_MACHINE_24KF, MIPS_FPU_VFP32);
 }
 
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
@@ -374,12 +373,16 @@ static VOID  halNetInit (VOID)
     API_INetVpnInit();
 #endif                                                                  /*  LW_CFG_NET_VPN_EN > 0       */
 }
-
+/*********************************************************************************************************
+  NE2000 网卡平台数据
+*********************************************************************************************************/
+#if 0
 static NE2000_DATA  _G_ne2000Data = {
         .uiBaseAddr = BSP_CFG_NE2000_BASE,
         .irq        = BSP_CFG_NE2000_VECTOR,
         .ucMacAddr  = { 0x08, 0x08, 0x3E, 0x26, 0x0A, 0x5A},
 };
+#endif
 /*********************************************************************************************************
 ** 函数名称: halNetifAttch
 ** 功能描述: 网络接口连接
@@ -390,6 +393,7 @@ static NE2000_DATA  _G_ne2000Data = {
 *********************************************************************************************************/
 static VOID  halNetifAttch (VOID)
 {
+#if 0
     static struct netif  ethernetif;
     ip_addr_t            ip, submask, gateway;
 
@@ -413,6 +417,7 @@ static VOID  halNetifAttch (VOID)
               (ethernetif.hwaddr[1] << 16) |
               (ethernetif.hwaddr[2] <<  8) |
               (ethernetif.hwaddr[3]));                                  /*  可以用 mac 设置随机数种子   */
+#endif
 }
 
 #endif                                                                  /*  LW_CFG_NET_EN > 0           */
@@ -717,8 +722,7 @@ INT bspInit (VOID)
      *  这里使用 bsp 设置启动参数, 如果 bootloader 支持, 可使用 bootloader 设置.
      *  为了兼容以前的项目, 这里 kfpu=yes 允许内核中(包括中断)使用 FPU.
      */
-    API_KernelStartParam("ncpus=1 kdlog=no kderror=yes kfpu=no heapchk=yes hz=100 "
-                         "varea=0xc0000000 vsize=0x3fffe000");
+    API_KernelStartParam("ncpus=1 kdlog=no kderror=yes kfpu=no heapchk=yes");
                                                                         /*  操作系统启动参数设置        */
     API_KernelStart(usrStartup,
                     cKernelHeap,

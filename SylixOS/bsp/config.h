@@ -35,7 +35,7 @@
 
 #define BSP_CFG_KERNEL_SIZE             (6 * 1024 * 1024)
 
-#define BSP_CFG_DATA_BASE               (BSP_CFG_RAM_SIZE    + BSP_CFG_KERNEL_SIZE)
+#define BSP_CFG_DATA_BASE               (BSP_CFG_RAM_BASE    + BSP_CFG_KERNEL_SIZE)
 #define BSP_CFG_DATA_PA_BASE            (BSP_CFG_RAM_PA_BASE + BSP_CFG_KERNEL_SIZE)
 
 #define BSP_CFG_COMMON_MEM_SIZE         (44 * 1024 * 1024)

@@ -30,7 +30,6 @@
 #define __IDE_CACHE_SIZE        (128 * LW_CFG_KB_SIZE)
 
 #define __IDE_BYTE_PER_SECTOR   (512)
-#define __IDE_SIZE              (1 * LW_CFG_GB_SIZE)
 
 #define __IDE_TIMEOUT           (2 * LW_OPTION_WAIT_A_SECOND)
 /*********************************************************************************************************

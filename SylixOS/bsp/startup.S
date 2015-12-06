@@ -24,6 +24,8 @@
 #endif
 
 #include <arch/assembler.h>
+#include "arch/mips/common/mipsExcAsm.h"
+#include "arch/mips/mm/mmu/mips32/mips32MmuAsm.h"
 #include "config.h"
 
     FILE_BEGIN()
@@ -36,16 +38,6 @@
     IMPORT_LABEL(archInterruptEntry)
     IMPORT_LABEL(archCacheErrorEntry)
     IMPORT_LABEL(archExceptionEntry)
-
-;/*********************************************************************************************************
-;  cache_loop
-;*********************************************************************************************************/
-
-MACRO_DEF(cache_loop   curr, end, line_sz, op)
-10: cache   \op , 0(\curr)
-    ADDU    \curr , \curr , \line_sz
-    BNE     \curr , \end , 10b
-MACRO_END()
 
 ;/*********************************************************************************************************
 ;  异常向量表
@@ -122,15 +114,6 @@ FUNC_DEF(reset)
     JALR    T9
     NOP
 
-    ;/* Initialize caches... */
-    ;//PTR_LA  t9, mips_cache_reset
-    ;//jalr    t9
-    ;//nop
-
-    ;/* ... and enable them */
-    ;//li  t0, BSP_CFG_SYS_MIPS_CACHE_MODE
-    ;//mtc0    t0, CP0_CONFIG
-
 ;/*********************************************************************************************************
 ;  初始化堆栈
 ;*********************************************************************************************************/
@@ -156,7 +139,7 @@ FUNC_DEF(reset)
     SW      T3 , 0(T1)
     ADDU    T0 , 4
     BLT     T1 , T2, 1b
-    ADDU    T1 , 4                                                      ;/* 指令优化，流水线             */
+    ADDU    T1 , 4                                                      ;/*  指令优化，流水线            */
 
 ;/*********************************************************************************************************
 ;  清零 BSS 段
@@ -218,15 +201,6 @@ FUNC_DEF(lowlevel_init)
     JR      RA
     NOP
 FUNC_END(lowlevel_init)
-
-;/*********************************************************************************************************
-;  mips_cache_reset
-;*********************************************************************************************************/
-
-FUNC_DEF(mips_cache_reset)
-    JR      RA
-    NOP
-FUNC_END(mips_cache_reset)
 
     FILE_END()
 

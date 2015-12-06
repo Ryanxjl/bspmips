@@ -26,13 +26,6 @@
 #include "driver/8250/8250_uart.h"
 #include "driver/int/i8259a.h"
 #include "driver/timer/i8254.h"
-
-static I8259A_CTL _8259adata = {
-        .iobase_master  = BSP_CFG_8259A_IO_BASE_MASTER,
-        .iobase_slave   = BSP_CFG_8259A_IO_BASE_SLAVE,
-        .trigger        = 0,
-    };
-
 /*********************************************************************************************************
   BSP 信息
 *********************************************************************************************************/
@@ -44,6 +37,14 @@ static const CHAR   _G_pcVersionInfo[] = "BSP version 0.2.0 for GEMINI";
   中断系统相关函数
 *********************************************************************************************************/
 #define MIPS_INTER_INT_NR               8                               /*  内部中断数目                */
+/*********************************************************************************************************
+  i8259A 平台数据
+*********************************************************************************************************/
+static I8259A_CTL _G_i8259aData = {
+        .iobase_master  = BSP_CFG_8259A_IO_BASE_MASTER,
+        .iobase_slave   = BSP_CFG_8259A_IO_BASE_SLAVE,
+        .trigger        = 0,
+};
 /*********************************************************************************************************
 ** 函数名称: bspIntInit
 ** 功能描述: 中断系统初始化
@@ -64,7 +65,7 @@ VOID  bspIntInit (VOID)
      * 的代码.
      */
 
-    i8259aInit(&_8259adata);
+    i8259aInit(&_G_i8259aData);
 
     API_InterVectorEnable(BSP_CFG_8259A1_VECTOR_BASE);
     API_InterVectorEnable(BSP_CFG_8259A2_VECTOR_BASE);
@@ -94,14 +95,14 @@ VOID  bspIntHandle (VOID)
     for (uiVector = 0; uiVector < MIPS_INTER_INT_NR; uiVector++) {
         if (uiCause & (1 << uiVector)) {
             if (uiVector == BSP_CFG_8259A_VECTOR) {
-                INT  iSubVector = i8259aIrq(&_8259adata);
+                INT  iSubVector = i8259aIrq(&_G_i8259aData);
                 if (iSubVector >= 0) {
-                    archIntHandle((ULONG)iSubVector + BSP_CFG_8259A_VECTOR_OFFSET, LW_FALSE);
+                    archIntHandle((ULONG)iSubVector + BSP_CFG_8259A_VECTOR_OFFSET, LW_TRUE);
                 } else {
                     while (1);
                 }
             } else {
-                archIntHandle((ULONG)uiVector, LW_FALSE);
+                archIntHandle((ULONG)uiVector, LW_TRUE);
             }
         }
     }
@@ -123,7 +124,7 @@ VOID  bspIntVectorEnable (ULONG  ulVector)
 
         mipsCp0StatusWrite(uiCP0Status);
     } else {
-        i8259aIrqEnable(&_8259adata, ulVector - BSP_CFG_8259A_VECTOR_OFFSET);
+        i8259aIrqEnable(&_G_i8259aData, ulVector - BSP_CFG_8259A_VECTOR_OFFSET);
     }
 }
 /*********************************************************************************************************
@@ -143,7 +144,7 @@ VOID  bspIntVectorDisable (ULONG  ulVector)
 
         mipsCp0StatusWrite(uiCP0Status);
     } else {
-        i8259aIrqDisable(&_8259adata, ulVector - BSP_CFG_8259A_VECTOR_OFFSET);
+        i8259aIrqDisable(&_G_i8259aData, ulVector - BSP_CFG_8259A_VECTOR_OFFSET);
     }
 }
 /*********************************************************************************************************
@@ -164,7 +165,7 @@ BOOL  bspIntVectorIsEnable (ULONG  ulVector)
 
         return  ((uiCP0Status & (1 << ulVector)) ? LW_TRUE : LW_FALSE);
     } else {
-        return  (i8259aIrqIsEnable(&_8259adata, ulVector - BSP_CFG_8259A_VECTOR_OFFSET) ?
+        return  (i8259aIrqIsEnable(&_G_i8259aData, ulVector - BSP_CFG_8259A_VECTOR_OFFSET) ?
                 LW_TRUE : LW_FALSE);
     }
 }
@@ -582,6 +583,13 @@ VOID    bspCpuPowerGet (UINT  *puiPowerLevel)
 static LW_HANDLE    htKernelTicks;                                      /*  操作系统时钟服务线程句柄    */
 #endif                                                                  /*  TICK_IN_THREAD > 0          */
 /*********************************************************************************************************
+  i8254 平台数据
+*********************************************************************************************************/
+static I8254_CTL _G_i8254Data = {
+    .iobase  = BSP_CFG_8254_IO_BASE,
+    .qcofreq = 1193182,
+};
+/*********************************************************************************************************
 ** 函数名称: __tickThread
 ** 功能描述: 初始化 tick 服务线程
 ** 输  入  : NONE
@@ -649,11 +657,7 @@ VOID  bspTickInit (VOID)
                                      &threakattr, LW_NULL);
 #endif                                                                  /*  TICK_IN_THREAD > 0          */
 
-    I8254_CTL _8254data = {
-        .iobase     = BSP_CFG_8254_IO_BASE,
-    };
-
-    i8254InitAsTick(&_8254data);
+    i8254InitAsTick(&_G_i8254Data);
 
     API_InterVectorConnect(ulVector,
                            (PINT_SVR_ROUTINE)__tickTimerIsr,
