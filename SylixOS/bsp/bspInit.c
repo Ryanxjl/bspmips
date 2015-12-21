@@ -639,7 +639,7 @@ static PVOID  halBootThread (PVOID  pvBootArg)
     halMonitorInit();
 #endif                                                                  /*  LW_CFG_MONITOR_EN > 0       */
 
-    system("shfile /yaffs2/n0/etc/startup.sh");                         /*  执行启动脚本                */
+    system("shfile etc/startup.sh");                                    /*  执行启动脚本                */
                                                                         /*  必须在初始化 shell 后调用!! */
 
     API_ThreadAttrSetStackSize(&threakattr, __LW_THREAD_MAIN_STK_SIZE); /*  设置 main 线程的堆栈大小    */

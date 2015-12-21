@@ -22,7 +22,9 @@
 #include "config.h"
 #include "SylixOS.h"
 
+#include "arch/mips/asm/hwcap.h"
 #include "arch/mips/common/cp0/mipsCp0.h"
+
 #include "driver/8250/8250_uart.h"
 #include "driver/int/i8259a.h"
 #include "driver/timer/i8254.h"
@@ -108,7 +110,7 @@ VOID  bspIntHandle (VOID)
     }
 }
 /*********************************************************************************************************
-** 函数名称: bspIntVecterEnable
+** 函数名称: bspIntVectorEnable
 ** 功能描述: 使能指定的中断向量
 ** 输  入  : ulVector     中断向量
 ** 输  出  : NONE
@@ -128,7 +130,7 @@ VOID  bspIntVectorEnable (ULONG  ulVector)
     }
 }
 /*********************************************************************************************************
-** 函数名称: bspIntVecterDisable
+** 函数名称: bspIntVectorDisable
 ** 功能描述: 禁能指定的中断向量
 ** 输  入  : ulVector     中断向量
 ** 输  出  : NONE
@@ -148,7 +150,7 @@ VOID  bspIntVectorDisable (ULONG  ulVector)
     }
 }
 /*********************************************************************************************************
-** 函数名称: bspIntVecterIsEnable
+** 函数名称: bspIntVectorIsEnable
 ** 功能描述: 检查指定的中断向量是否使能
 ** 输  入  : ulVector     中断向量
 ** 输  出  : LW_FALSE 或 LW_TRUE
@@ -224,16 +226,19 @@ CPCHAR  bspInfoVersion (VOID)
 ** 函数名称: bspInfoHwcap
 ** 功能描述: BSP 硬件特性
 ** 输　入  : NONE
-** 输　出  : 硬件特性 (如果支持硬浮点, 可以加入 HWCAP_VFP , HWCAP_VFPv3 , HWCAP_VFPv3D16 , HWCAP_NEON)
+** 输　出  : 硬件特性 (如果支持硬浮点, 可以加入 HWCAP_VFP)
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
 ULONG  bspInfoHwcap (VOID)
 {
-    /*
-     * TODO: 返回硬件特性 (如果支持硬浮点, 可以加入 HWCAP_VFP , HWCAP_VFPv3 , HWCAP_VFPv3D16 , HWCAP_NEON)
-     */
-    return  (0ul);
+    UINT32  uiConfig1 = mipsCp0Config1Read();
+
+    if (uiConfig1 & M_Config1FP) {
+        return  (HWCAP_VFP);
+    } else {
+        return  (0ul);
+    }
 }
 /*********************************************************************************************************
 ** 函数名称: bspInfoRomBase
@@ -488,10 +493,6 @@ ULONG  bspMmuPteMaxNum (VOID)
 VOID   bspMpInt (ULONG  ulCPUId)
 {
     (VOID)ulCPUId;
-
-    /*
-     * TODO: 加入你的处理代码
-     */
 }
 /*********************************************************************************************************
 ** 函数名称: bspCpuUp
@@ -503,9 +504,6 @@ VOID   bspMpInt (ULONG  ulCPUId)
 *********************************************************************************************************/
 VOID   bspCpuUp (ULONG  ulCPUId)
 {
-    /*
-     * TODO: 加入你的处理代码, 如果没有, 请保留下面的调试信息
-     */
     bspDebugMsg("bspCpuUp() error: this cpu CAN NOT support this operate!\r\n");
 }
 /*********************************************************************************************************
@@ -518,9 +516,6 @@ VOID   bspCpuUp (ULONG  ulCPUId)
 *********************************************************************************************************/
 VOID   bspCpuDown (ULONG  ulCPUId)
 {
-    /*
-     * TODO: 加入你的处理代码, 如果没有, 请保留下面的调试信息
-     */
     bspDebugMsg("bspCpuDown() error: this cpu CAN NOT support this operate!\r\n");
 }
 /*********************************************************************************************************
@@ -536,9 +531,6 @@ VOID   bspCpuDown (ULONG  ulCPUId)
 *********************************************************************************************************/
 VOID    bspSuspend (VOID)
 {
-    /*
-     * TODO: 加入你的处理代码, 如果没有, 请保留下面的调试信息
-     */
     bspDebugMsg("bspSuspend() error: this BSP CAN NOT support this operate!\r\n");
 }
 /*********************************************************************************************************
@@ -551,9 +543,6 @@ VOID    bspSuspend (VOID)
 *********************************************************************************************************/
 VOID    bspCpuPowerSet (UINT  uiPowerLevel)
 {
-    /*
-     * TODO: 加入你的处理代码
-     */
 }
 /*********************************************************************************************************
 ** 函数名称: bspCpuPowerGet
@@ -565,9 +554,6 @@ VOID    bspCpuPowerSet (UINT  uiPowerLevel)
 *********************************************************************************************************/
 VOID    bspCpuPowerGet (UINT  *puiPowerLevel)
 {
-    /*
-     * TODO: 加入你的处理代码, 如果没有, 请保留下面的代码
-     */
     if (puiPowerLevel) {
         *puiPowerLevel = LW_CPU_POWERLEVEL_TOP;
     }
@@ -688,9 +674,6 @@ VOID  bspTickHighResolution (struct timespec *ptv)
 *********************************************************************************************************/
 VOID bspDelayUs (ULONG ulUs)
 {
-    /*
-     * TODO: 根据你的处理器性能, 修改为你的处理代码
-     */
     volatile UINT  i;
 
     while (ulUs) {
@@ -709,9 +692,6 @@ VOID bspDelayUs (ULONG ulUs)
 *********************************************************************************************************/
 VOID  bspDelayNs (ULONG ulNs)
 {
-    /*
-     * TODO: 根据你的处理器性能, 修改为你的处理代码
-     */
     volatile UINT  i;
 
     while (ulNs) {

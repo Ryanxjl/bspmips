@@ -85,9 +85,17 @@ FUNC_DEF(reset)
     MTC0(ZERO, CP0_WATCHHI)
 
     ;/* WP(Watch Pending), SW0/1 should be cleared */
-    MTC0(ZERO, CP0_CAUSE)
+    LI      T0 , M_CauseIV
+    MTC0(T0, CP0_CAUSE)
 
-    MTC0(ZERO, CP0_STATUS)
+    ;/*
+    ; * Establish Status Register
+    ; * (set BEV, clear ERL, clear EXL, clear IE)
+    ; * BEV = 0: RAM kseg0
+    ; * BEV = 1: ROM kseg1
+    ; */
+    LI      T0 , M_StatusBEV
+    MTC0(T0, CP0_STATUS)
 
     ;/* Init Timer */
     MTC0(ZERO, CP0_COUNT)
@@ -97,22 +105,13 @@ FUNC_DEF(reset)
     LI      T0 , MIPS_UNCACHED
     MTC0(T0,   CP0_CONFIG)
 
-    .align  2
-    BAL     1f
-    NOP
-    PTR     _gp
-
-1:
-    LW      GP , 0(RA)
+    ;/* Init GP register */
+    LA      GP , _gp
 
 ;/*********************************************************************************************************
 ;  在这里加入初始化最核心硬件接口 (有 BOOTLOADER 就不需要初始化 SDRAM 与 PLL)
 ;*********************************************************************************************************/
 
-    ;/* Initialize any external memory */
-    LA      T9 , lowlevel_init
-    JALR    T9
-    NOP
 
 ;/*********************************************************************************************************
 ;  初始化堆栈
@@ -167,40 +166,6 @@ FUNC_DEF(reset)
     NOP
 
 FUNC_END(reset)
-
-;/*********************************************************************************************************
-;  lowlevel_init
-;*********************************************************************************************************/
-
-FUNC_DEF(lowlevel_init)
-    .set mips32
-    ;/*
-    ; * Step 2) Establish Status Register
-    ; * (set BEV, clear ERL, clear EXL, clear IE)
-    ; */
-    LI      T1 , 0x00400000
-    MTC0(T1, CP0_STATUS)
-
-    ;/*
-    ; * Step 3) Establish CP0 Config0
-    ; * (set K0=3)
-    ; */
-    LI      T1 , 0x00000003
-    MTC0(T1, CP0_CONFIG)
-
-    ;/*
-    ; * Step 7) Establish Cause
-    ; * (set IV bit)
-    ; */
-    LI      T1 , 0x00800000
-    MTC0(T1, CP0_CAUSE)
-
-    ;/* Establish Wired (and Random) */
-    MTC0(ZERO, CP0_WIRED)
-
-    JR      RA
-    NOP
-FUNC_END(lowlevel_init)
 
     FILE_END()
 
