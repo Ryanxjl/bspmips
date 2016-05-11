@@ -31,7 +31,7 @@
 /*********************************************************************************************************
   BSP пео╒
 *********************************************************************************************************/
-static const CHAR   _G_pcCpuInfo[]     = "MIPS 24KF(132MHz NonFPU)";
+static const CHAR   _G_pcCpuInfo[]     = "MIPS 24KF(132MHz FPU32)";
 static const CHAR   _G_pcCacheInfo[]   = "32KBytes L1-Cache(D-16K/I-16K)";
 static const CHAR   _G_pcPacketInfo[]  = "QEMU MIPS r4k platform";
 static const CHAR   _G_pcVersionInfo[] = "BSP version 0.2.0 for GEMINI";

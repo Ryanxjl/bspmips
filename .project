@@ -18,7 +18,7 @@
 			</arguments>
 		</buildCommand>
 		<buildCommand>
-			<name>com.sylixos.realcoder.SylixOSBuilder</name>
+			<name>com.sylixos.realevo.SylixOSBuilder</name>
 			<arguments>
 			</arguments>
 		</buildCommand>
@@ -27,6 +27,6 @@
 		<nature>org.eclipse.cdt.core.cnature</nature>
 		<nature>org.eclipse.cdt.managedbuilder.core.managedBuildNature</nature>
 		<nature>org.eclipse.cdt.managedbuilder.core.ScannerConfigNature</nature>
-		<nature>com.sylixos.realcoder.SylixOSProject</nature>
+		<nature>com.sylixos.realevo.SylixOSProject</nature>
 	</natures>
 </projectDescription>
